@@ -1,0 +1,66 @@
+// components/Messages.js
+import { useState, useEffect } from 'react';
+import API_BASE_URL from '../utils/config';
+
+export default function Messages({ user }) {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true); // Handle loading state
+  const [error, setError] = useState(null); // Handle errors
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_BASE_URL}/messages`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) {
+          throw new Error('Failed to fetch messages');
+        }
+        const data = await res.json();
+        setMessages(data.messages);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching messages:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchMessages();
+    }
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <p className="text-red-500">Error: {error}</p>;
+  }
+
+  if (messages.length === 0) {
+    return <p>No messages received yet.</p>;
+  }
+
+  return (
+    <div className="bg-white p-6 rounded shadow-md">
+      <h2 className="text-2xl font-semibold mb-4">Your Messages</h2>
+      {messages.map((msg) => (
+        <div key={msg._id} className="border-b py-4">
+          <p>{msg.content}</p>
+          <p className="text-gray-500 text-sm">
+            {new Date(msg.createdAt).toLocaleString()}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
