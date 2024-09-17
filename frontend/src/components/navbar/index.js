@@ -24,16 +24,16 @@ export default function Navbar() {
             <div className="ml-10 flex items-baseline space-x-4">
               {user ? (
                 <>
-                  <Link href="/dashboard">
+                  {/* <Link href="/dashboard">
                     <span className="cursor-pointer text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium">
                       Dashboard
                     </span>
-                  </Link>
-                  <Link href="/messages">
+                  </Link> */}
+                  {/* <Link href="/messages">
                     <span className="cursor-pointer text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium">
                       Messages
                     </span>
-                  </Link>
+                  </Link> */}
                   <button
                     onClick={logout}
                     className="text-white hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-medium"
@@ -104,16 +104,16 @@ export default function Navbar() {
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {user ? (
               <>
-                <Link href="/dashboard">
+                {/* <Link href="/">
                   <span className="cursor-pointer block text-white hover:bg-blue-700 px-3 py-2 rounded-md text-base font-medium">
                     Dashboard
                   </span>
-                </Link>
-                <Link href="/messages">
+                </Link> */}
+                {/* <Link href="/messages">
                   <span className="cursor-pointer block text-white hover:bg-blue-700 px-3 py-2 rounded-md text-base font-medium">
                     Messages
                   </span>
-                </Link>
+                </Link> */}
                 <button
                   onClick={() => {
                     logout();

@@ -2,6 +2,7 @@ import { useEffect, useContext, useState } from 'react';
 import { useRouter } from 'next/router';
 import { AuthContext } from '../components/context/AuthContext';
 import Dashboard from '@/components/dashboard';
+import Link from 'next/link';
 
 
 export default function Home() {
@@ -38,18 +39,18 @@ export default function Home() {
           Send and receive anonymous messages from your friends!
         </p>
         <div>
-          <a
+          <Link
             href="/signup"
             className="bg-white text-blue-600 px-6 py-3 rounded-full font-semibold mr-4"
           >
             Get Started
-          </a>
-          <a
+          </Link>
+          <Link
             href="/login"
             className="bg-transparent border border-white px-6 py-3 rounded-full font-semibold"
           >
             Login
-          </a>
+          </Link>
         </div>
       </div>
     }
