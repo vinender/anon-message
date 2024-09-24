@@ -14,9 +14,10 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+
 app.use(
   cors({
-    origin: 'https://anon-message-bh9p.vercel.app/api', // Replace with your frontend URL
+    origin: 'https://anon-message-six.vercel.app/api', // Replace with your frontend URL
     credentials: true,
   })
 );
