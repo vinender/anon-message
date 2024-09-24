@@ -28,6 +28,11 @@ const messageRoutes = require('./routes/messageRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 
+
+app.get('/', (req, res) => {
+  res.send('Hello from Express.js on Vercel!');
+});
+
 // Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
