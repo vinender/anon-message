@@ -14,14 +14,10 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-
-app.use(
-  cors({
-    origin: 'https://anon-message-six.vercel.app', // Replace with your frontend URL
-    credentials: true,
-  })
-);
-
+app.use(cors({
+  origin: '*',
+  credentials: true,
+}));
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const messageRoutes = require('./routes/messageRoutes');

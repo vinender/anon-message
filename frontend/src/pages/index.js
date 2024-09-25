@@ -3,57 +3,171 @@ import { useRouter } from 'next/router';
 import { AuthContext } from '../components/context/AuthContext';
 import Dashboard from '@/components/dashboard';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ChakraProvider, Box, Flex, VStack, Heading, Text, extendTheme,Button, Image, SimpleGrid, Container, useColorModeValue } from '@chakra-ui/react';
+import { InfiniteTestimonialCards } from '@/components/ui/infinite-testimonial-cards';
+
+const theme = extendTheme({
+  config: {
+    initialColorMode: 'dark',
+    useSystemColorMode: false,
+  },
+  styles: {
+    global: {
+      body: {
+        bg: 'black',
+        color: 'white',
+      },
+    },
+  },
+});
 
 
+const testimonial = [
+  { quote: "AnonMessage has changed the way I communicate with my friends. It's fun and secure!", name: 'User A', title: 'test' },
+  { quote: "I love the anonymity and the design is so futuristic!", name: 'User B', title: 'test 2' },
+  { quote: "I love the anonymity and the design is so futuristic!", name: 'User B', title: 'test 2' },
+  { quote: "I love the anonymity and the design is so futuristic!", name: 'User B', title: 'test 2' },
+  { quote: "I love the anonymity and the design is so futuristic!", name: 'User B', title: 'test 2' },
+]
 export default function Home() {
   const { user } = useContext(AuthContext);
   const router = useRouter();
-  const [dashboard, setDashboard] = useState(false)
+  const [dashboard, setDashboard] = useState(false);
 
   useEffect(() => {
-    // If user is logged in, redirect to dashboard
     if (user) {
-      setDashboard(true)
-      // router.replace('/dashboard');
-    }else{
-      router.replace('/login');
+      setDashboard(true);
     }
-  }, [user,dashboard]);
+  }, [user]);
 
-  console.log('user',user)
-
-   
-
-
-  
+  const bgGradient = useColorModeValue(
+    'linear(to-br, gray.900, purple.900, violet.600)',
+    'linear(to-br, gray.900, purple.800, violet.500)'
+  );
 
   return (
-    <>
-      { 
-      dashboard ? 
-      <Dashboard/> 
-      : 
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-        <h1 className="text-5xl font-bold mb-4">Welcome to AnonMessage</h1>
-        <p className="text-xl mb-8">
-          Send and receive anonymous messages from your friends!
-        </p>
-        <div>
-          <Link
-            href="/signup"
-            className="bg-white text-blue-600 px-6 py-3 rounded-full font-semibold mr-4"
-          >
-            Get Started
-          </Link>
-          <Link
-            href="/login"
-            className="bg-transparent border border-white px-6 py-3 rounded-full font-semibold"
-          >
-            Login
-          </Link>
-        </div>
-      </div>
-    }
-    </>
+    <ChakraProvider theme={theme}>
+      {dashboard ? (
+        <Dashboard />
+      ) : (
+        <Box minH="100vh" bgGradient={bgGradient} color="white">
+          <Container maxW="container.xl">
+            {/* Header */}
+            <Flex as="header" align="center" justify="space-between" wrap="wrap" py={6}>
+              <Heading as="h1" size="xl" fontWeight="bold">
+                AnonMessage
+              </Heading>
+              <Box>
+                <Button as={Link} href="/signup" variant="ghost" mr={4} _hover={{ color: 'purple.300' }}>
+                  Sign Up
+                </Button>
+                <Button as={Link} href="/login" variant="outline" _hover={{ bg: 'purple.700' }}>
+                  Login
+                </Button>
+              </Box>
+            </Flex>
+
+            {/* Hero Section */}
+            <VStack as="section" spacing={8} textAlign="center" py={20}>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+                <Heading as="h2" size="4xl" fontWeight="extrabold" lineHeight="shorter">
+                  Connect Anonymously.
+                </Heading>
+              </motion.div>
+              <Text fontSize="xl" maxW="2xl">
+                Send and receive anonymous messages from your friends in a secure and fun way.
+              </Text>
+              <Button
+                as={Link}
+                href="/signup"
+                size="lg"
+                colorScheme="purple"
+                fontWeight="bold"
+                px={8}
+                _hover={{ transform: 'translateY(-2px)', boxShadow: 'lg' }}
+              >
+                Get Started
+              </Button>
+            </VStack>
+
+            {/* Features Section */}
+            <Box as="section" py={16} bg="gray.800" borderRadius="xl" my={16}>
+              <VStack spacing={12}>
+                <Heading as="h3" size="2xl" fontWeight="bold">
+                  Features
+                </Heading>
+                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10} px={8}>
+                  {[
+                    { title: 'Anonymity', description: 'Stay anonymous while connecting with friends and others.', icon: '/images/anonymity.svg' },
+                    { title: 'Security', description: 'Your messages are encrypted and secure.', icon: '/images/security.svg' },
+                    { title: 'Community', description: 'Join a growing community of anonymous users.', icon: '/images/community.svg' },
+                  ].map((feature, index) => (
+                    <VStack key={index} align="center" p={6} bg="gray.700" borderRadius="lg" boxShadow="md">
+                      <Image src={feature.icon} alt={feature.title} boxSize="50px" mb={4} />
+                      <Heading as="h4" size="md" fontWeight="semibold">
+                        {feature.title}
+                      </Heading>
+                      <Text textAlign="center">{feature.description}</Text>
+                    </VStack>
+                  ))}
+                </SimpleGrid>
+              </VStack>
+            </Box>
+
+            {/* Testimonials Section */}
+            {/* <Box as="section" py={16}> */}
+              <InfiniteTestimonialCards items={testimonial} />
+              {/* <VStack spacing={12}>
+                <Heading as="h3" size="2xl" fontWeight="bold">
+                  Testimonials
+                </Heading>
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
+                  {[
+                    { quote: "AnonMessage has changed the way I communicate with my friends. It's fun and secure!", author: 'User A' },
+                    { quote: "I love the anonymity and the design is so futuristic!", author: 'User B' },
+                  ].map((testimonial, index) => (
+                    <Box key={index} bg="gray.800" p={8} borderRadius="lg" boxShadow="md">
+                      <Text fontSize="lg" fontStyle="italic" mb={4}>
+                        "{testimonial.quote}"
+                      </Text>
+                      <Text fontWeight="semibold" textAlign="right">
+                        - {testimonial.author}
+                      </Text>
+                    </Box>
+                  ))}
+                </SimpleGrid>
+              </VStack> */}
+            {/* </Box> */}
+
+            {/* Call to Action Section */}
+            <Box as="section" textAlign="center" py={16} bg="purple.700" borderRadius="xl" my={16}>
+              <VStack spacing={6}>
+                <Heading as="h3" size="2xl" fontWeight="bold">
+                  Ready to Experience AnonMessage?
+                </Heading>
+                <Button
+                  as={Link}
+                  href="/signup"
+                  size="lg"
+                  colorScheme="white"
+                  color="purple.700"
+                  px={8}
+                  fontWeight="bold"
+                  _hover={{ bg: 'gray.200', transform: 'translateY(-2px)', boxShadow: 'lg' }}
+                >
+                  Create Your Free Account
+                </Button>
+              </VStack>
+            </Box>
+
+            {/* Footer */}
+            <Box as="footer" textAlign="center" py={8} bg="gray.900" borderRadius="xl">
+              <Text>&copy; {new Date().getFullYear()} AnonMessage. All rights reserved.</Text>
+            </Box>
+          </Container>
+        </Box>
+      )}
+    </ChakraProvider>
   );
 }
