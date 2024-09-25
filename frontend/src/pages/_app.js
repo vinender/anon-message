@@ -1,14 +1,13 @@
 import "@/styles/globals.css";
-import { AuthProvider } from '../components/context/AuthContext';
-
+import { AuthProvider } from "../components/context/AuthContext";
+import { Layout } from "@/components/layout";
 
 export default function App({ Component, pageProps }) {
   return (
     <AuthProvider>
-      {/* Place Navbar and Component inside AuthProvider */}
-      <Component {...pageProps} />
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
     </AuthProvider>
-  )
-   
-  
+  );
 }

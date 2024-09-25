@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ChakraProvider, Box, Flex, VStack, Heading, Text, extendTheme,Button, Image, SimpleGrid, Container, useColorModeValue } from '@chakra-ui/react';
 import { InfiniteTestimonialCards } from '@/components/ui/infinite-testimonial-cards';
+import { TextRevealCard } from '@/components/ui/text-reveal-card';
 
 const theme = extendTheme({
   config: {
@@ -30,6 +31,8 @@ const testimonial = [
   { quote: "I love the anonymity and the design is so futuristic!", name: 'User B', title: 'test 2' },
   { quote: "I love the anonymity and the design is so futuristic!", name: 'User B', title: 'test 2' },
 ]
+
+
 export default function Home() {
   const { user } = useContext(AuthContext);
   const router = useRouter();
@@ -67,12 +70,13 @@ export default function Home() {
                 </Button>
               </Box>
             </Flex>
+            
 
             {/* Hero Section */}
             <VStack as="section" spacing={8} textAlign="center" py={20}>
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
                 <Heading as="h2" size="4xl" fontWeight="extrabold" lineHeight="shorter">
-                  Connect Anonymously.
+                <TextRevealCard revealText={'Stay Anonymous'} text={'Hey you are.....'}/>
                 </Heading>
               </motion.div>
               <Text fontSize="xl" maxW="2xl">
@@ -118,27 +122,7 @@ export default function Home() {
             {/* Testimonials Section */}
             {/* <Box as="section" py={16}> */}
               <InfiniteTestimonialCards items={testimonial} />
-              {/* <VStack spacing={12}>
-                <Heading as="h3" size="2xl" fontWeight="bold">
-                  Testimonials
-                </Heading>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
-                  {[
-                    { quote: "AnonMessage has changed the way I communicate with my friends. It's fun and secure!", author: 'User A' },
-                    { quote: "I love the anonymity and the design is so futuristic!", author: 'User B' },
-                  ].map((testimonial, index) => (
-                    <Box key={index} bg="gray.800" p={8} borderRadius="lg" boxShadow="md">
-                      <Text fontSize="lg" fontStyle="italic" mb={4}>
-                        "{testimonial.quote}"
-                      </Text>
-                      <Text fontWeight="semibold" textAlign="right">
-                        - {testimonial.author}
-                      </Text>
-                    </Box>
-                  ))}
-                </SimpleGrid>
-              </VStack> */}
-            {/* </Box> */}
+              
 
             {/* Call to Action Section */}
             <Box as="section" textAlign="center" py={16} bg="purple.700" borderRadius="xl" my={16}>
