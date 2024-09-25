@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { ChakraProvider, Box, Flex, VStack, Heading, Text, extendTheme,Button, Image, SimpleGrid, Container, useColorModeValue } from '@chakra-ui/react';
 import { InfiniteTestimonialCards } from '@/components/ui/infinite-testimonial-cards';
 import { TextRevealCard } from '@/components/ui/text-reveal-card';
+import WeighingScale from '@/components/ui/weigh-scale';
 
 const theme = extendTheme({
   config: {
@@ -38,6 +39,11 @@ export default function Home() {
   const router = useRouter();
   const [dashboard, setDashboard] = useState(false);
 
+
+  const [positiveMessages, setPositiveMessages] = useState(10);
+  const [negativeMessages, setNegativeMessages] = useState(0);
+
+
   useEffect(() => {
     if (user) {
       setDashboard(true);
@@ -54,8 +60,11 @@ export default function Home() {
       {dashboard ? (
         <Dashboard />
       ) : (
+
+         
         <Box minH="100vh" bgGradient={bgGradient} color="white">
           <Container maxW="container.xl">
+                <WeighingScale positiveMessages={70} negativeMessages={200} />
             {/* Header */}
             <Flex as="header" align="center" justify="space-between" wrap="wrap" py={6}>
               <Heading as="h1" size="xl" fontWeight="bold">
