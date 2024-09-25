@@ -64,7 +64,7 @@ export default function Home() {
          
         <Box minH="100vh" bgGradient={bgGradient} color="white">
           <Container maxW="container.xl">
-                <WeighingScale positiveMessages={70} negativeMessages={200} />
+                <WeighingScale positiveMessages={7270} negativeMessages={200} />
             {/* Header */}
             <Flex as="header" align="center" justify="space-between" wrap="wrap" py={6}>
               <Heading as="h1" size="xl" fontWeight="bold">
