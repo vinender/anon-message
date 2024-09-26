@@ -8,6 +8,7 @@ import { ChakraProvider, Box, Flex, VStack, Heading, Text, extendTheme,Button, I
 import { InfiniteTestimonialCards } from '@/components/ui/infinite-testimonial-cards';
 import { TextRevealCard } from '@/components/ui/text-reveal-card';
 import WeighingScale from '@/components/ui/weigh-scale';
+import { Boxes, BoxesCore } from '@/components/ui/background-boxes';
 
 const theme = extendTheme({
   config: {
@@ -64,7 +65,7 @@ export default function Home() {
          
         <Box minH="100vh" bgGradient={bgGradient} color="white">
           <Container maxW="container.xl">
-                <WeighingScale positiveMessages={7270} negativeMessages={200} />
+                
             {/* Header */}
             <Flex as="header" align="center" justify="space-between" wrap="wrap" py={6}>
               <Heading as="h1" size="xl" fontWeight="bold">
@@ -83,6 +84,7 @@ export default function Home() {
 
             {/* Hero Section */}
             <VStack as="section" spacing={8} textAlign="center" py={20}>
+              
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
                 <Heading as="h2" size="4xl" fontWeight="extrabold" lineHeight="shorter">
                 <TextRevealCard revealText={'Stay Anonymous'} text={'Hey you are.....'}/>
@@ -103,10 +105,12 @@ export default function Home() {
                 Get Started
               </Button>
             </VStack>
+            <WeighingScale positiveMessages={70} negativeMessages={200} />
 
             {/* Features Section */}
             <Box as="section" py={16} bg="gray.800" borderRadius="xl" my={16}>
               <VStack spacing={12}>
+                
                 <Heading as="h3" size="2xl" fontWeight="bold">
                   Features
                 </Heading>
@@ -159,7 +163,9 @@ export default function Home() {
               <Text>&copy; {new Date().getFullYear()} AnonMessage. All rights reserved.</Text>
             </Box>
           </Container>
+          {/* <BoxesCore/> */}
         </Box>
+         
       )}
     </ChakraProvider>
   );

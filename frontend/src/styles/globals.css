@@ -13,6 +13,13 @@
     --foreground: #ededed;
   }
 }
+/* In your CSS or Tailwind configuration */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate {
+    animation: none;
+  }
+}
 
 body {
   color: var(--foreground);
