@@ -21,10 +21,11 @@ app.use(cors({
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
-
+app.use('/api/users', userRoutes); // Add this new line
 
 app.get('/', (req, res) => {
   res.send('Hello from Express.js on Vercel!');

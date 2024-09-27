@@ -2,15 +2,17 @@ import { useContext, useEffect, useState } from 'react';
 import Navbar from '../navbar';
 import { AuthContext } from '../context/AuthContext';
 import API_BASE_URL from '../../utils/config';
+import { decryptMessage } from '@/utils/crypto';
 
 
 
 export default function Dashboard() {
-
   const { user } = useContext(AuthContext);
   const [incomingMessages, setIncomingMessages] = useState([]);
   const [sentMessages, setSentMessages] = useState([]);
   const [shareLink, setShareLink] = useState('');
+
+  console.log('user info',user)
 
   useEffect(() => {
     if (!user) {
@@ -20,12 +22,12 @@ export default function Dashboard() {
       return;
     }
 
-    console.log('username',user)
+    console.log('user private key',user.privateKey)
 
-    const fetchMessages = async () => {
+    const fetchAndDecryptMessages = async () => {
       const token = localStorage.getItem('token');
 
-      // Fetch incoming messages
+      // Fetch and decrypt incoming messages
       const resIncoming = await fetch(`${API_BASE_URL}/messages`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -33,10 +35,16 @@ export default function Dashboard() {
       });
       if (resIncoming.ok) {
         const data = await resIncoming.json();
-        setIncomingMessages(data.messages);
+        const decryptedIncoming = await Promise.all(
+          data.messages.map(async (msg) => ({
+            ...msg,
+            content: await decryptMessage(msg.content, user.privateKey)
+          }))
+        );
+        setIncomingMessages(decryptedIncoming);
       }
 
-      // Fetch sent messages
+      // Fetch sent messages (these are typically not encrypted for the sender)
       const resSent = await fetch(`${API_BASE_URL}/messages/sent`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -48,7 +56,7 @@ export default function Dashboard() {
       }
     };
 
-    fetchMessages();
+    fetchAndDecryptMessages();
 
     // Set shareLink on the client side
     if (typeof window !== 'undefined') {
@@ -59,6 +67,7 @@ export default function Dashboard() {
   }, [user]);
 
   if (!user) return null;
+
 
   return (
     <>

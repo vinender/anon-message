@@ -1,8 +1,12 @@
 // models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
+
 
 const UserSchema = new mongoose.Schema({
+  publicKey: String,
+  privateKey: String,
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
 });

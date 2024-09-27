@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
     if (token) {
       const decoded = jwt_decode(token);
       console.log('token decoded',decoded)
-      setUser({ id: decoded.userId, username: decoded.username });
+      setUser({ id: decoded.userId, username: decoded.username, privateKey:decoded.privateKey });
     }
   }, []);
 
