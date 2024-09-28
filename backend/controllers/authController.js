@@ -87,8 +87,8 @@ exports.login = async (req, res) => {
       { 
         userId: user._id, 
         username: user.username,
-        publicKey: user.publicKey,
-        privateKey: user.privateKey // Be cautious about including the private key
+        // publicKey: user.publicKey,
+        // privateKey: user.privateKey // Be cautious about including the private key
       }, 
       process.env.JWT_SECRET, 
       {

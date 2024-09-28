@@ -3,13 +3,17 @@ import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import Navbar from '../navbar';
 import Link from 'next/link';
+import { FcGoogle } from 'react-icons/fc';
+import { useRouter } from 'next/router';
+import { GoogleLogin, googleLogout } from '@react-oauth/google';
 
 export default function Signup() {
-  const { signup } = useContext(AuthContext);
+  const { signup, login } = useContext(AuthContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const router = useRouter();
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -42,7 +46,51 @@ export default function Signup() {
     }
   };
 
-  
+  // Handle Google Sign-Up Success
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const { credential } = credentialResponse;
+      const decoded = jwt_decode(credential);
+
+      // Extract necessary information from the decoded token
+      const { sub, email, name, picture } = decoded;
+
+      // Send the credential to the backend for verification and user creation/login
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ credential }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Assuming the backend returns your application's JWT token
+        localStorage.setItem('token', data.token);
+        // Optionally, decode the token and set the user context
+        // You might need to adjust this based on your backend's response
+        const decodedToken = jwt_decode(data.token);
+        // Update AuthContext with user data
+        // You might need to extend your AuthContext to handle this
+        // For simplicity, we can reload the page or redirect
+        router.push('/');
+      } else {
+        setErrors({ apiError: data.message || 'Google Sign-Up failed.' });
+      }
+    } catch (error) {
+      console.error('Google Sign-Up Error:', error);
+      setErrors({ apiError: 'Google Sign-Up failed. Please try again.' });
+    }
+  };
+
+  // Handle Google Sign-Up Failure
+  const handleGoogleFailure = (error) => {
+    console.error('Google Sign-Up Failure:', error);
+    setErrors({ apiError: 'Google Sign-Up failed. Please try again.' });
+  };
+
   return (
     <>
       <Navbar />
@@ -142,6 +190,22 @@ export default function Signup() {
               </button>
             </div>
           </form>
+
+          {/* Divider */}
+          <div className="flex items-center justify-center">
+            <span className="border-b border-gray-600 w-full"></span>
+            <span className="mx-2 text-gray-400">OR</span>
+            <span className="border-b border-gray-600 w-full"></span>
+          </div>
+
+          {/* Google Sign-Up Button */}
+          <div className="flex items-center justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleFailure}
+              useOneTap
+            />
+          </div>
         </div>
       </div>
     </>

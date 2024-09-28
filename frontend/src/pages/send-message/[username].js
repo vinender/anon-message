@@ -216,6 +216,7 @@ export default function SendMessage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-400 via-cyan-800 to-red-500 p-8">
+      
       <div className="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-4xl mx-auto">
         <div className="p-8">
           <h1 className="text-3xl font-extrabold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-cyan-800">
