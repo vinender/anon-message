@@ -1,18 +1,18 @@
 // routes/authRoutes.js
 const express = require('express');
 const router = express.Router();
-const { signup, login  } = require('../controllers/authController');
+const { signup, login ,googleAuth , resetPassword,forgotPassword} = require('../controllers/authController');
 
 // @route   POST /api/auth/signup
 // @desc    Register a new user
 router.post('/signup', signup);
  
 // Google Authentication
-router.post('/google', authController.googleAuth);
+router.post('/google',  googleAuth);
 
 // Forgot Password
-router.post('/forgot-password', authController.forgotPassword);
-router.post('/reset-password', authController.resetPassword);
+router.post('/forgot-password',  forgotPassword);
+router.post('/reset-password',  resetPassword);
 // @route   POST /api/auth/login
 // @desc    Login a user
 router.post('/login', login);

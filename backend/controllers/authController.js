@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
+const { decryptPrivateKey,encryptPrivateKey } = require('../utils/crypto');
+
 
 const nodemailer = require('nodemailer');
  
@@ -19,115 +21,111 @@ const transporter = nodemailer.createTransport({
 });
 
 // Traditional Signup
+
+// Traditional Signup
+
 exports.signup = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, publicKey, privateKey } = req.body;
+
+  if (!username || !email || !password || !publicKey || !privateKey) {
+    return res.status(400).json({ message: 'All fields are required.' });
+  }
 
   try {
-    // Check if username or email exists
-    const existingUser = await User.findOne({ 
-      $or: [{ username }, { email }] 
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ message: 'Username or email already exists.' });
+    // Check if user already exists
+    let user = await User.findOne({ $or: [{ email }, { username }] });
+    if (user) {
+      return res.status(400).json({ message: 'User already exists.' });
     }
 
-    // Generate RSA key pair in PEM format
-    const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
-      modulusLength: 2048,
-      publicKeyEncoding: {
-        type: 'spki',
-        format: 'pem',
-      },
-      privateKeyEncoding: {
-        type: 'pkcs8',
-        format: 'pem',
-      },
-    });
+    // Encrypt the private key
+    const encryptedPrivateKey = encryptPrivateKey(privateKey);
 
-    // Create new user (password will be hashed by pre-save hook)
-    const user = new User({  
-      username, 
+    // Create new user
+    user = new User({
+      username,
       email,
-      password, // Plaintext password; hashing handled by pre-save hook
-      publicKey, // PEM format
-      privateKey, // PEM format; consider not storing on server if possible
+      password,
+      publicKey,
+      encryptedPrivateKey: JSON.stringify(encryptedPrivateKey),
     });
-
-    console.log('New user:', user);
 
     await user.save();
 
-    // Generate JWT token without privateKey
+    // Optionally, auto-login after signup
+    // Generate JWT and send it back
+    const jwt = require('jsonwebtoken');
     const token = jwt.sign(
       { 
         userId: user._id, 
-        username: user.username,
-        email: user.email,
+        username: user.username, 
+        email: user.email, 
         publicKey: user.publicKey,
       }, 
       process.env.JWT_SECRET, 
-      {
-        expiresIn: '1d',
-      }
+      { expiresIn: '1d' }
     );
 
     res.status(201).json({ token });
   } catch (error) {
     console.error('Signup Error:', error);
-    res.status(500).json({ message: 'Error creating user.' });
+    res.status(500).json({ message: 'Server error during signup.' });
   }
 };
 
+
 // Traditional Login
+
 exports.login = async (req, res) => {
   const { username, password } = req.body;
-  
+
+  if (!username || !password) {
+    return res.status(400).json({ message: 'All fields are required.' });
+  }
+
   try {
-    // Find user by username or email
-    const user = await User.findOne({ 
-      $or: [{ username }, { email: username }] // Allow login via email or username
-    });
-    
+    // Find user by username
+    const user = await User.findOne({ username });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials.' });
     }
 
-    // Check password only if the user has a password (not Google-authenticated)
-    if (user.password) {
-      const isMatch = await user.comparePassword(password);
-      console.log('Is matched:', isMatch);
-      if (!isMatch) {
-        return res.status(400).json({ message: 'Invalid credentials.' });
-      }
-    } else {
-      return res.status(400).json({ message: 'Please log in using Google Sign-In.' });
+    // Compare password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials.' });
     }
 
-    // Generate token without privateKey
+    // Decrypt the private key
+    const encryptedPrivateKey = JSON.parse(user.encryptedPrivateKey);
+    const decryptedPrivateKey = decryptPrivateKey(encryptedPrivateKey);
+
+    // Generate JWT including the decrypted privateKey
+    const jwt = require('jsonwebtoken');
     const token = jwt.sign(
       { 
         userId: user._id, 
-        username: user.username,
-        email: user.email,
+        username: user.username, 
+        email: user.email, 
         publicKey: user.publicKey,
+        privateKey: decryptedPrivateKey,
       }, 
       process.env.JWT_SECRET, 
-      {
-        expiresIn: '1d',
-      }
+      { expiresIn: '1d' }
     );
 
     res.status(200).json({ token });
   } catch (error) {
     console.error('Login Error:', error);
-    res.status(500).json({ message: 'Error logging in.' });
+    res.status(500).json({ message: 'Server error during login.' });
   }
 };
 
+
+
 // Google Authentication
 exports.googleAuth = async (req, res) => {
-  const { credential } = req.body;
+  const { credential, publicKey } = req.body;
 
   try {
     if (!credential) {
@@ -157,26 +155,11 @@ exports.googleAuth = async (req, res) => {
         user.googleId = googleId;
       } else {
         // Create new user
-        // Generate RSA key pair
-        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
-          modulusLength: 2048,
-          publicKeyEncoding: {
-            type: 'spki',
-            format: 'pem',
-          },
-          privateKeyEncoding: {
-            type: 'pkcs8',
-            format: 'pem',
-          },
-        });
-
-        // Create new user
         user = new User({
           username: name.replace(/\s+/g, '').toLowerCase(), // Simple username generation
           email,
           googleId,
-          publicKey, // PEM format
-          privateKey, // PEM format; consider security implications
+          publicKey, // Received from client
         });
       }
 
@@ -203,6 +186,8 @@ exports.googleAuth = async (req, res) => {
     res.status(500).json({ message: 'Google authentication failed.' });
   }
 };
+
+
 
 // Forgot Password - Request Reset Link
 exports.forgotPassword = async (req, res) => {

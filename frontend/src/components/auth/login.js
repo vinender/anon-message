@@ -3,13 +3,17 @@ import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import Navbar from '../navbar';
 import Link from 'next/link';
+import { decryptPrivateKey } from '@/utils/crypto';
+import { getPrivateKey } from '@/utils/storage';
+import { useRouter } from 'next/router';
 
 export default function Login() {
-    
   const { login } = useContext(AuthContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [passphrase, setPassphrase] = useState(''); // Prompt user for passphrase
   const [errors, setErrors] = useState({});
+  const router = useRouter();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -30,13 +34,40 @@ export default function Login() {
     if (Object.keys(validationErrors).length === 0) {
       try {
         await login(username, password);
+
+        // After successful login, prompt for passphrase to decrypt privateKey
+        const userPassphrase = prompt('Enter your passphrase to decrypt your private key:');
+        if (!userPassphrase) {
+          throw new Error('Passphrase is required to decrypt the private key.');
+        }
+
+        const encryptedData = await getPrivateKey();
+        if (!encryptedData) {
+          throw new Error('Private key not found. Please generate it during signup.');
+        }
+
+        const decryptedPrivateKey = await decryptPrivateKey(encryptedData, userPassphrase);
+
+        // Store decrypted privateKey securely in memory or appropriate state
+        // For example, set it in AuthContext or a separate state
+        // Here, we'll set it in the user state (assuming AuthContext allows it)
+        // Modify AuthContext to handle setting privateKey if necessary
+
+        // Example:
+        // setUser((prevUser) => ({ ...prevUser, privateKey: decryptedPrivateKey }));
+
+        // For demonstration, we'll store it in a global variable or secure context
+        localStorage.setItem('privateKey', decryptedPrivateKey); // Not recommended, better to use in-memory storage
+
+        // Redirect to dashboard or desired page
+        router.push('/');
       } catch (err) {
         setErrors({ apiError: err.message });
       }
     }
   };
 
- 
+
 
   return (
     <>

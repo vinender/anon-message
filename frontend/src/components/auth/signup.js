@@ -1,4 +1,5 @@
-// pages/signup.js
+// components/Signup.js
+
 import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import Navbar from '../navbar';
@@ -6,12 +7,18 @@ import Link from 'next/link';
 import { FcGoogle } from 'react-icons/fc';
 import { useRouter } from 'next/router';
 import { GoogleLogin, googleLogout } from '@react-oauth/google';
+import { encryptPrivateKey, generateRSAKeyPair } from '@/utils/crypto';
+import { storePrivateKey } from '@/utils/storage';
+ 
+
 
 export default function Signup() {
-  const { signup, login } = useContext(AuthContext);
+  const { signup } = useContext(AuthContext);
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // Removed passphrase states
   const [errors, setErrors] = useState({});
   const router = useRouter();
 
@@ -26,6 +33,13 @@ export default function Signup() {
       validationErrors.username = 'Username must be at least 3 characters.';
     }
 
+    // Validate email
+    if (!email.trim()) {
+      validationErrors.email = 'Email is required.';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      validationErrors.email = 'Invalid email address.';
+    }
+
     // Validate password
     if (!password) {
       validationErrors.password = 'Password is required.';
@@ -37,9 +51,18 @@ export default function Signup() {
 
     setErrors(validationErrors);
 
+    console.log('validation error', validationErrors);
+
     if (Object.keys(validationErrors).length === 0) {
       try {
-        await signup(username, password);
+        // Generate RSA key pair
+        const { publicKey: generatedPublicKey, privateKey: generatedPrivateKey } = await generateRSAKeyPair();
+
+        // Proceed with signup by sending username, email, password, publicKey, and privateKey
+        await signup({ username, email, password, publicKey: generatedPublicKey, privateKey: generatedPrivateKey });
+
+        // Redirect to dashboard or desired page
+        router.push('/');
       } catch (err) {
         setErrors({ apiError: err.message });
       }
@@ -67,14 +90,9 @@ export default function Signup() {
       const data = await res.json();
 
       if (res.ok) {
-        // Assuming the backend returns your application's JWT token
+        // Store JWT token received from backend
         localStorage.setItem('token', data.token);
-        // Optionally, decode the token and set the user context
-        // You might need to adjust this based on your backend's response
-        const decodedToken = jwt_decode(data.token);
-        // Update AuthContext with user data
-        // You might need to extend your AuthContext to handle this
-        // For simplicity, we can reload the page or redirect
+        // Redirect to dashboard or desired page
         router.push('/');
       } else {
         setErrors({ apiError: data.message || 'Google Sign-Up failed.' });
@@ -91,6 +109,7 @@ export default function Signup() {
     setErrors({ apiError: 'Google Sign-Up failed. Please try again.' });
   };
 
+  
   return (
     <>
       <Navbar />
@@ -114,6 +133,7 @@ export default function Signup() {
               </div>
             )}
             <div className="rounded-md shadow-sm -space-y-px">
+              {/* Username Field */}
               <div>
                 <label htmlFor="username" className="sr-only">
                   Username
@@ -135,6 +155,29 @@ export default function Signup() {
                   <p className="text-red-400 text-sm mt-1">{errors.username}</p>
                 )}
               </div>
+              {/* Email Field */}
+              <div>
+                <label htmlFor="email" className="sr-only">
+                  Email Address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
+                    errors.email ? 'border-red-500' : 'border-gray-600'
+                  } bg-gray-800 placeholder-gray-400 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 focus:z-10 sm:text-sm`}
+                  placeholder="Email Address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                {errors.email && (
+                  <p className="text-red-400 text-sm mt-1">{errors.email}</p>
+                )}
+              </div>
+              {/* Password Field */}
               <div>
                 <label htmlFor="password" className="sr-only">
                   Password
@@ -156,6 +199,7 @@ export default function Signup() {
                   <p className="text-red-400 text-sm mt-1">{errors.password}</p>
                 )}
               </div>
+              {/* Confirm Password Field */}
               <div>
                 <label htmlFor="confirm-password" className="sr-only">
                   Confirm Password
@@ -168,7 +212,7 @@ export default function Signup() {
                   required
                   className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
                     errors.confirmPassword ? 'border-red-500' : 'border-gray-600'
-                  } bg-gray-800 placeholder-gray-400 text-white rounded-b-md focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 focus:z-10 sm:text-sm`}
+                  } bg-gray-800 placeholder-gray-400 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 focus:z-10 sm:text-sm`}
                   placeholder="Confirm Password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -179,6 +223,7 @@ export default function Signup() {
                   </p>
                 )}
               </div>
+              
             </div>
 
             <div>

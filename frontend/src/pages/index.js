@@ -24,6 +24,8 @@ import { FaLock, FaUserSecret, FaUsers } from 'react-icons/fa';
       }
     }, [user]);
 
+    console.log('dashboard',dashboard)
+
     return (
       <>
         {dashboard ? (

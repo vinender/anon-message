@@ -2,28 +2,35 @@ import { useCallback, useContext, useEffect, useState } from 'react';
 import Navbar from '../navbar';
 import { AuthContext } from '../context/AuthContext';
 import API_BASE_URL from '../../utils/config';
-import { decryptMessage } from '@/utils/crypto';
+import { decryptMessage, decryptPrivateKey, } from '@/utils/storage';
+
+import { useRouter } from 'next/router';
+
 
 export default function Dashboard() {
-  const { user, isLoading, isUserLoaded } = useContext(AuthContext); // Assuming isUserLoaded is provided
+  const { user, isUserLoaded } = useContext(AuthContext);
   const [incomingMessages, setIncomingMessages] = useState([]);
   const [sentMessages, setSentMessages] = useState([]);
   const [shareLink, setShareLink] = useState('');
   const [isFetching, setIsFetching] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
+  const router = useRouter();
 
+  // Fetch and decrypt messages
   const fetchAndDecryptMessages = useCallback(async () => {
     if (!user || !user.privateKey) {
       console.error('User or private key not available');
       return;
     }
 
-    const token = localStorage.getItem('token'); // Alternatively, get token from AuthContext if available
+    const token = localStorage.getItem('token');
     if (!token) {
       console.error('Token not found');
       return;
     }
 
     setIsFetching(true);
+    setFetchError(null);
 
     try {
       // Fetch incoming messages
@@ -44,6 +51,7 @@ export default function Dashboard() {
         setIncomingMessages(decryptedIncoming);
       } else {
         console.error('Failed to fetch incoming messages');
+        setFetchError('Failed to fetch incoming messages.');
       }
 
       // Fetch sent messages
@@ -58,20 +66,24 @@ export default function Dashboard() {
         setSentMessages(data.messages);
       } else {
         console.error('Failed to fetch sent messages');
+        setFetchError('Failed to fetch sent messages.');
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
+      setFetchError('An error occurred while fetching messages.');
     } finally {
       setIsFetching(false);
     }
   }, [user]);
 
+  // Fetch messages once user is loaded
   useEffect(() => {
-    if (!isLoading && isUserLoaded && user && user.privateKey) {
+    if (isUserLoaded && user && user.privateKey) {
       fetchAndDecryptMessages();
     }
-  }, [isLoading, isUserLoaded, user, fetchAndDecryptMessages]);
+  }, [isUserLoaded, user, fetchAndDecryptMessages]);
 
+  // Generate shareable link
   useEffect(() => {
     if (typeof window !== 'undefined' && user) {
       const origin = window.location.origin;
@@ -80,12 +92,15 @@ export default function Dashboard() {
     }
   }, [user]);
 
+  // Redirect to login if not authenticated
   useEffect(() => {
-    if (!user && typeof window !== 'undefined') {
-      window.location.href = '/login';
+    if (isUserLoaded && !user && typeof window !== 'undefined') {
+      router.push('/login');
     }
-  }, [user]);
-  if (isLoading || !isUserLoaded || !user || !user.privateKey) {
+  }, [isUserLoaded, user, router]);
+
+  // If user is not loaded, show loading
+  if (!isUserLoaded || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-100 to-purple-100">
         <div className="animate-pulse flex space-x-4">
@@ -105,6 +120,10 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-50 to-purple-50">
       <Navbar />
+      {/* Passphrase Modal */}
+      {/* {showModal && (
+        <PrivateKeyModal onDecrypt={handleDecryptPrivateKey} />
+      )} */}
       <div className="container mx-auto px-4 py-12">
         <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">
           Welcome, <span className="text-blue-600">{user.username}</span>!
