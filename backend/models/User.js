@@ -19,7 +19,7 @@ const UserSchema = new mongoose.Schema({
     trim: true,
     match: [/\S+@\S+\.\S+/, 'is invalid'],
   },
-  password: { 
+  password: {  
     type: String, 
     required: true,
     minlength: 6,
@@ -30,11 +30,11 @@ const UserSchema = new mongoose.Schema({
     sparse: true,
   },
   publicKey: { 
-    type: String, 
+    type: String, // Raw Base64 string
     required: true,
   },
-  encryptedPrivateKey: { 
-    type: String, 
+  encryptedPrivateKey: { // Stored as a JSON string
+    type: String,
     required: true,
   },
   resetPasswordToken: String,
