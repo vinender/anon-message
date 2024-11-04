@@ -2,68 +2,41 @@
 
 import { createContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import jwt_decode from 'jwt-decode';
-import API_BASE_URL from '../../utils/config';
-
+import { useSession, signIn, signOut } from 'next-auth/react'; // Import useSession, signIn, signOut
 
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [isUserLoaded, setIsUserLoaded] = useState(false);
+  const { data: session, status } = useSession(); // Get session data
   const router = useRouter();
 
-  // Function to load user from token
-  const loadUserFromToken = () => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decoded = jwt_decode(token);
-        setUser({
-          id: decoded.userId,
-          username: decoded.username,
-          email: decoded.email,
-          publicKey: decoded.publicKey,
-          privateKey: decoded.privateKey, // Include privateKey
-        });
-      } catch (error) {
-        console.error('Failed to decode token:', error);
-        setUser(null);
-        localStorage.removeItem('token');
-      }
-    }
-    setIsUserLoaded(true);
-  };
+  const [user, setUser] = useState(null);
+  const [isUserLoaded, setIsUserLoaded] = useState(false);
 
-  // Load user on initial render
   useEffect(() => {
-    loadUserFromToken();
-  }, []);
+    if (status === 'loading') {
+      setIsUserLoaded(false);
+    } else if (status === 'authenticated') {
+      setUser(session.user); // Update user state with session data
+      setIsUserLoaded(true);
+    } else {
+      setUser(null);
+      setIsUserLoaded(true);
+    }
+  }, [session, status]);
 
-  // Login function
+  // Update login function to use NextAuth's signIn
   const login = async (username, password) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+      const res = await signIn('credentials', {
+        redirect: false,
+        username,
+        password,
       });
-
-      const data = await res.json();
-
       if (res.ok) {
-        localStorage.setItem('token', data.token);
-        const decoded = jwt_decode(data.token);
-        setUser({
-          id: decoded.userId,
-          username: decoded.username,
-          email: decoded.email,
-          publicKey: decoded.publicKey,
-          privateKey: decoded.privateKey, // Include privateKey
-        });
         router.push('/');
       } else {
-        throw new Error(data.message || 'Login failed.');
+        throw new Error('Login failed.');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -71,38 +44,13 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Signup function
-  const signup = async ({ username, email, password, publicKey }) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, publicKey, privateKey: 'PLACEHOLDER' }), // Placeholder for privateKey
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        // Optionally, auto-login after signup
-        await login(username, password);
-      } else {
-        throw new Error(data.message || 'Signup failed.');
-      }
-    } catch (error) {
-      console.error('Signup error:', error);
-      throw error;
-    }
-  };
-
-  // Logout function
+  // Update logout function to use NextAuth's signOut
   const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    router.push('/login'); // Redirect to login page after logout
+    signOut({ callbackUrl: '/login' });
   };
 
   return (
-    <AuthContext.Provider value={{ user, isUserLoaded, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isUserLoaded, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

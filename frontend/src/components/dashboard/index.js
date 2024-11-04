@@ -16,65 +16,72 @@ export default function Dashboard() {
   const [fetchError, setFetchError] = useState(null);
   const router = useRouter();
 
+  console.log('user private key',user)
+  console.log('user data',user)
+
   // Fetch and decrypt messages
   const fetchAndDecryptMessages = useCallback(async () => {
-    if (!user || !user.privateKey) {
-      console.error('User or private key not available');
+    if (!user) {
+      console.error('User not available');
       return;
     }
-
+  
     const token = localStorage.getItem('token');
     if (!token) {
       console.error('Token not found');
       return;
     }
-
+  
     setIsFetching(true);
     setFetchError(null);
-
+  
     try {
+      // Retrieve the encrypted private key from IndexedDB
+      const encryptedPrivateKeyData = await getPrivateKey();
+  
+      if (!encryptedPrivateKeyData) {
+        console.error('Encrypted private key not found');
+        setFetchError('Private key not found. Please log in again.');
+        return;
+      }
+  
+      // Decrypt the private key using the secret from .env
+      const decryptedPrivateKey = await decryptPrivateKey(
+        encryptedPrivateKeyData,
+        process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET // Ensure this is prefixed with NEXT_PUBLIC_
+      );
+  
       // Fetch incoming messages
       const resIncoming = await fetch(`${API_BASE_URL}/messages`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
+  
       if (resIncoming.ok) {
         const data = await resIncoming.json();
+  
+        // Decrypt each message using the decrypted private key
         const decryptedIncoming = await Promise.all(
           data.messages.map(async (msg) => ({
             ...msg,
-            content: await decryptMessage(msg.content, user.privateKey),
+            content: await decryptMessage(msg.content, decryptedPrivateKey),
           }))
         );
+  
         setIncomingMessages(decryptedIncoming);
       } else {
         console.error('Failed to fetch incoming messages');
         setFetchError('Failed to fetch incoming messages.');
       }
-
-      // Fetch sent messages
-      const resSent = await fetch(`${API_BASE_URL}/messages/sent`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (resSent.ok) {
-        const data = await resSent.json();
-        setSentMessages(data.messages);
-      } else {
-        console.error('Failed to fetch sent messages');
-        setFetchError('Failed to fetch sent messages.');
-      }
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error('Error fetching or decrypting messages:', error);
       setFetchError('An error occurred while fetching messages.');
     } finally {
       setIsFetching(false);
     }
   }, [user]);
+  
 
   // Fetch messages once user is loaded
   useEffect(() => {

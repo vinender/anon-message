@@ -31,12 +31,20 @@ exports.signup = async (req, res) => {
     return res.status(400).json({ message: 'All fields are required.' });
   }
 
+  console.log('private key',privateKey)
+
   try {
     // Check if user already exists
     let user = await User.findOne({ $or: [{ email }, { username }] });
     if (user) {
       return res.status(400).json({ message: 'User already exists.' });
     }
+
+    // Strip PEM headers and footers from the public key
+    const strippedPublicKey = publicKey
+      .replace('-----BEGIN PUBLIC KEY-----', '')
+      .replace('-----END PUBLIC KEY-----', '')
+      .replace(/\s/g, '');
 
     // Encrypt the private key
     const encryptedPrivateKey = encryptPrivateKey(privateKey);
@@ -46,21 +54,20 @@ exports.signup = async (req, res) => {
       username,
       email,
       password,
-      publicKey,
+      publicKey: strippedPublicKey, // Store without headers
       encryptedPrivateKey: JSON.stringify(encryptedPrivateKey),
     });
 
     await user.save();
 
-    // Optionally, auto-login after signup
     // Generate JWT and send it back
-    const jwt = require('jsonwebtoken');
     const token = jwt.sign(
       { 
         userId: user._id, 
         username: user.username, 
         email: user.email, 
         publicKey: user.publicKey,
+        privateKey:  privateKey,
       }, 
       process.env.JWT_SECRET, 
       { expiresIn: '1d' }

@@ -1,24 +1,20 @@
 // components/Signup.js
 
-import { useState, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { useState } from 'react';
 import Navbar from '../navbar';
 import Link from 'next/link';
 import { FcGoogle } from 'react-icons/fc';
 import { useRouter } from 'next/router';
-import { GoogleLogin, googleLogout } from '@react-oauth/google';
+import { signIn } from 'next-auth/react';
 import { encryptPrivateKey, generateRSAKeyPair } from '@/utils/crypto';
 import { storePrivateKey } from '@/utils/storage';
- 
 
 
 export default function Signup() {
-  const { signup } = useContext(AuthContext);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  // Removed passphrase states
   const [errors, setErrors] = useState({});
   const router = useRouter();
 
@@ -51,65 +47,48 @@ export default function Signup() {
 
     setErrors(validationErrors);
 
-    console.log('validation error', validationErrors);
-
     if (Object.keys(validationErrors).length === 0) {
       try {
         // Generate RSA key pair
-        const { publicKey: generatedPublicKey, privateKey: generatedPrivateKey } = await generateRSAKeyPair();
-
-        // Proceed with signup by sending username, email, password, publicKey, and privateKey
-        await signup({ username, email, password, publicKey: generatedPublicKey, privateKey: generatedPrivateKey });
-
-        // Redirect to dashboard or desired page
-        router.push('/');
+        const { publicKey, privateKey } = await generateRSAKeyPair();
+    
+        // Encrypt the private key using the secret
+        const encryptedPrivateKeyData = await encryptPrivateKey(
+          privateKey,
+          process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
+        );
+    
+        // Store the encrypted private key in IndexedDB
+        await storePrivateKey(encryptedPrivateKeyData);
+    
+        // Send public key and encrypted private key to the server
+        const res = await fetch('http://localhost:5000/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username,
+            email,
+            password,
+            publicKey,
+            encryptedPrivateKey: encryptedPrivateKeyData,
+          }),
+        });
+    
+        const data = await res.json();
+    
+        if (res.ok) {
+          // Redirect to login or automatically log in
+          router.push('/login');
+        } else {
+          setErrors({ apiError: data.message || 'Registration failed.' });
+        }
       } catch (err) {
-        setErrors({ apiError: err.message });
+        setErrors({ apiError: err.message || 'An error occurred during registration.' });
       }
-    }
-  };
+    };
+    
+};
 
-  // Handle Google Sign-Up Success
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      const { credential } = credentialResponse;
-      const decoded = jwt_decode(credential);
-
-      // Extract necessary information from the decoded token
-      const { sub, email, name, picture } = decoded;
-
-      // Send the credential to the backend for verification and user creation/login
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ credential }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        // Store JWT token received from backend
-        localStorage.setItem('token', data.token);
-        // Redirect to dashboard or desired page
-        router.push('/');
-      } else {
-        setErrors({ apiError: data.message || 'Google Sign-Up failed.' });
-      }
-    } catch (error) {
-      console.error('Google Sign-Up Error:', error);
-      setErrors({ apiError: 'Google Sign-Up failed. Please try again.' });
-    }
-  };
-
-  // Handle Google Sign-Up Failure
-  const handleGoogleFailure = (error) => {
-    console.error('Google Sign-Up Failure:', error);
-    setErrors({ apiError: 'Google Sign-Up failed. Please try again.' });
-  };
-
-  
   return (
     <>
       <Navbar />
@@ -128,9 +107,7 @@ export default function Signup() {
           </div>
           <form className="mt-8 space-y-6" onSubmit={handleSignup}>
             {errors.apiError && (
-              <div className="bg-red-900 text-red-200 p-3 rounded">
-                {errors.apiError}
-              </div>
+              <div className="bg-red-900 text-red-200 p-3 rounded">{errors.apiError}</div>
             )}
             <div className="rounded-md shadow-sm -space-y-px">
               {/* Username Field */}
@@ -218,12 +195,9 @@ export default function Signup() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
                 {errors.confirmPassword && (
-                  <p className="text-red-400 text-sm mt-1">
-                    {errors.confirmPassword}
-                  </p>
+                  <p className="text-red-400 text-sm mt-1">{errors.confirmPassword}</p>
                 )}
               </div>
-              
             </div>
 
             <div>
@@ -245,11 +219,17 @@ export default function Signup() {
 
           {/* Google Sign-Up Button */}
           <div className="flex items-center justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleFailure}
-              useOneTap
-            />
+            <button
+              type="button"
+              onClick={() => signIn('google', {
+                callbackUrl: '/', // or wherever you want to redirect after login
+                redirect: true,
+              })}
+              className="group relative w-full flex justify-center py-2 px-4 border border-gray-600 text-sm font-medium rounded-md text-gray-100 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
+            >
+              <FcGoogle className="mr-2" />
+              Sign up with Google
+            </button>
           </div>
         </div>
       </div>
