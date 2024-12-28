@@ -1,14 +1,13 @@
 // components/Signup.js
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Navbar from '../navbar';
 import Link from 'next/link';
 import { FcGoogle } from 'react-icons/fc';
 import { useRouter } from 'next/router';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { encryptPrivateKey, generateRSAKeyPair } from '@/utils/crypto';
 import { storePrivateKey } from '@/utils/storage';
-
 
 export default function Signup() {
   const [username, setUsername] = useState('');
@@ -16,10 +15,16 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+  const [googleRegistrationCompleted, setGoogleRegistrationCompleted] = useState(false);
 
+  console.log(':: session',session?.user?.id)
   const handleSignup = async (e) => {
     e.preventDefault();
+     setIsSubmittingForm(true);
     const validationErrors = {};
 
     // Validate username
@@ -51,16 +56,16 @@ export default function Signup() {
       try {
         // Generate RSA key pair
         const { publicKey, privateKey } = await generateRSAKeyPair();
-    
+
         // Encrypt the private key using the secret
         const encryptedPrivateKeyData = await encryptPrivateKey(
           privateKey,
           process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
         );
-    
+
         // Store the encrypted private key in IndexedDB
         await storePrivateKey(encryptedPrivateKeyData);
-    
+
         // Send public key and encrypted private key to the server
         const res = await fetch('http://localhost:5000/api/auth/signup', {
           method: 'POST',
@@ -73,9 +78,9 @@ export default function Signup() {
             encryptedPrivateKey: encryptedPrivateKeyData,
           }),
         });
-    
+
         const data = await res.json();
-    
+
         if (res.ok) {
           // Redirect to login or automatically log in
           router.push('/login');
@@ -84,10 +89,72 @@ export default function Signup() {
         }
       } catch (err) {
         setErrors({ apiError: err.message || 'An error occurred during registration.' });
+      } finally {
+        setIsSubmittingForm(false)
       }
     };
     
 };
+
+const handleGoogleSignup = async () => {
+  setIsGoogleLoading(true);
+    signIn('google', {
+        callbackUrl: '/signup',
+        redirect: true,  // This is set to false
+    });
+};
+
+
+useEffect(() => {
+    const handleGoogleRegistration = async () => {
+      if (session && !googleRegistrationCompleted) {
+            try {
+                // Generate RSA key pair
+                const { publicKey, privateKey } = await generateRSAKeyPair();
+
+                // Encrypt the private key using the secret
+                const encryptedPrivateKeyData = await encryptPrivateKey(
+                    privateKey,
+                    process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
+                );
+
+                // Store the encrypted private key in IndexedDB
+                await storePrivateKey(encryptedPrivateKeyData);
+// sd
+                // Send public key and encrypted private key to the server
+                const res = await fetch('http://localhost:5000/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    credential: session?.user?.id,
+                    name: session.user.name,
+                    email: session.user.email,
+                    publicKey,
+                    encryptedPrivateKey: encryptedPrivateKeyData,
+                }),
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('token', data.token);
+                    setGoogleRegistrationCompleted(true);
+                    router.push('/');
+                } else {
+                setErrors({ apiError: data.message || 'Google registration failed.' });
+                }
+
+            } catch (err) {
+                setErrors({ apiError: err.message || 'An error occurred during google registration.' });
+            } finally {
+                setIsGoogleLoading(false);
+            }
+        }
+    };
+    handleGoogleRegistration();
+    }, [session, router, googleRegistrationCompleted]);
+
+
 
   return (
     <>
@@ -203,9 +270,10 @@ export default function Signup() {
             <div>
               <button
                 type="submit"
+                  disabled={isSubmittingForm}
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-black bg-cyan-400 hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
               >
-                Sign Up
+                 {isSubmittingForm ? 'Signing Up...' : 'Sign Up'}
               </button>
             </div>
           </form>
@@ -220,15 +288,13 @@ export default function Signup() {
           {/* Google Sign-Up Button */}
           <div className="flex items-center justify-center">
             <button
-              type="button"
-              onClick={() => signIn('google', {
-                callbackUrl: '/', // or wherever you want to redirect after login
-                redirect: true,
-              })}
+                type="button"
+                onClick={handleGoogleSignup}
+                disabled={isGoogleLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-gray-600 text-sm font-medium rounded-md text-gray-100 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
             >
               <FcGoogle className="mr-2" />
-              Sign up with Google
+               {isGoogleLoading ? 'Signing in...' : 'Sign up with Google'}
             </button>
           </div>
         </div>

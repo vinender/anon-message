@@ -2,90 +2,115 @@ import { useCallback, useContext, useEffect, useState } from 'react';
 import Navbar from '../navbar';
 import { AuthContext } from '../context/AuthContext';
 import API_BASE_URL from '../../utils/config';
-import { decryptMessage, decryptPrivateKey, } from '@/utils/storage';
+import { decryptMessage, decryptPrivateKey, getPrivateKey} from '@/utils/storage';
 
 import { useRouter } from 'next/router';
+
 
 
 export default function Dashboard() {
   const { user, isUserLoaded } = useContext(AuthContext);
   const [incomingMessages, setIncomingMessages] = useState([]);
-  const [sentMessages, setSentMessages] = useState([]);
   const [shareLink, setShareLink] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const router = useRouter();
-
-  console.log('user private key',user)
-  console.log('user data',user)
+  const [decryptionError, setDecryptionError] = useState(null);
+  
 
   // Fetch and decrypt messages
   const fetchAndDecryptMessages = useCallback(async () => {
+
     if (!user) {
-      console.error('User not available');
+      console.log('User not available');
+      setFetchError("User not available. Please login.")
       return;
     }
   
     const token = localStorage.getItem('token');
     if (!token) {
-      console.error('Token not found');
+      console.log('Token not found');
+       setFetchError("Authentication token not found. Please login.");
       return;
     }
   
     setIsFetching(true);
     setFetchError(null);
+    setDecryptionError(null);
   
     try {
-      // Retrieve the encrypted private key from IndexedDB
-      const encryptedPrivateKeyData = await getPrivateKey();
+      // Log the token being used
+      console.log('Using token:', token);
   
-      if (!encryptedPrivateKeyData) {
-        console.error('Encrypted private key not found');
-        setFetchError('Private key not found. Please log in again.');
-        return;
-      }
-  
-      // Decrypt the private key using the secret from .env
-      const decryptedPrivateKey = await decryptPrivateKey(
-        encryptedPrivateKeyData,
-        process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET // Ensure this is prefixed with NEXT_PUBLIC_
-      );
-  
-      // Fetch incoming messages
-      const resIncoming = await fetch(`${API_BASE_URL}/messages`, {
+      const resIncoming = await fetch(`${API_BASE_URL}/messages/anonymous`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
   
-      if (resIncoming.ok) {
-        const data = await resIncoming.json();
+       // Log the API response
+      console.log('API Response status:', resIncoming.status);
   
-        // Decrypt each message using the decrypted private key
+      if (!resIncoming.ok) {
+        const errorData = await resIncoming.json();
+        console.log('API Error:', errorData);
+        setFetchError(`Failed to fetch messages: ${errorData.message || 'Unknown error'}`);
+        return;
+      }
+
+      const data = await resIncoming.json();
+      console.log('API Response data:', data);
+  
+        // Get private key
+        const encryptedPrivateKeyData = await getPrivateKey();
+        console.log('Retrieved encrypted private key:', !!encryptedPrivateKeyData);
+  
+        if (!encryptedPrivateKeyData) {
+          setFetchError('Private key not found. Please log in again.');
+          return;
+        }
+  
+        const decryptedPrivateKey = await decryptPrivateKey(
+          encryptedPrivateKeyData,
+          process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
+        );
+        console.log('Private key decrypted successfully');
+  
+        // Decrypt messages
         const decryptedIncoming = await Promise.all(
-          data.messages.map(async (msg) => ({
-            ...msg,
-            content: await decryptMessage(msg.content, decryptedPrivateKey),
-          }))
+          data.messages.map(async (msg) => {
+            try {
+              const decryptedContent = await decryptMessage(msg.content, decryptedPrivateKey);
+              return {
+                ...msg,
+                content: decryptedContent,
+              };
+            } catch (error) {
+              console.log('Error decrypting message:', error);
+               setDecryptionError("Error decrypting one or more messages.");
+              return {
+                ...msg,
+                content: 'Error decrypting message',
+              };
+            }
+          })
         );
   
+        console.log('Decrypted messages:', decryptedIncoming);
         setIncomingMessages(decryptedIncoming);
-      } else {
-        console.error('Failed to fetch incoming messages');
-        setFetchError('Failed to fetch incoming messages.');
-      }
+
     } catch (error) {
-      console.error('Error fetching or decrypting messages:', error);
-      setFetchError('An error occurred while fetching messages.');
+      console.log('Fetch error:', error);
+      setFetchError(`Failed to fetch messages: ${error.message || 'Network error'}`);
     } finally {
       setIsFetching(false);
     }
   }, [user]);
   
-
+ 
   // Fetch messages once user is loaded
   useEffect(() => {
-    if (isUserLoaded && user && user.privateKey) {
+    if (isUserLoaded && user ) {
       fetchAndDecryptMessages();
     }
   }, [isUserLoaded, user, fetchAndDecryptMessages]);
@@ -94,7 +119,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (typeof window !== 'undefined' && user) {
       const origin = window.location.origin;
-      const link = `${origin}/send-message/${user.username}`;
+      const link = `${origin}/send-message/${user.name}`;
       setShareLink(link);
     }
   }, [user]);
@@ -127,13 +152,9 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-50 to-purple-50">
       <Navbar />
-      {/* Passphrase Modal */}
-      {/* {showModal && (
-        <PrivateKeyModal onDecrypt={handleDecryptPrivateKey} />
-      )} */}
       <div className="container mx-auto px-4 py-12">
         <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">
-          Welcome, <span className="text-blue-600">{user.username}</span>!
+          Welcome, <span className="text-blue-600">{user.name}</span>!
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -180,6 +201,16 @@ export default function Dashboard() {
                 </svg>
                 Incoming Messages
               </h2>
+             {fetchError && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <span className="block sm:inline">{fetchError}</span>
+                </div>
+            )}
+             {decryptionError && (
+                <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <span className="block sm:inline">{decryptionError}</span>
+                </div>
+            )}
               {isFetching ? (
                 <div className="flex justify-center items-center h-48">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>

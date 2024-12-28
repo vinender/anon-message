@@ -55,79 +55,140 @@ export async function generateRSAKeyPair() {
       keyPair.privateKey
     );
     const privateKeyBase64 = arrayBufferToBase64(exportedPrivateKey);
-    console.log('rsa private key',privateKeyBase64)
 
     return {
-      publicKey: publicKeyBase64, // Stored without PEM headers
-      privateKey: privateKeyBase64, // Stored without PEM headers
+      publicKey: publicKeyBase64,
+      privateKey: privateKeyBase64,
     };
-
-    
   } catch (error) {
     console.error("Error generating RSA key pair:", error);
     throw error;
   }
 }
 
-// Decrypt the encryptedPrivateKey using user-provided passphrase
-export async function decryptPrivateKey(encrypted, passphrase) {
-  const { iv, encryptedData, tag } = encrypted;
 
-  // Convert hex strings to ArrayBuffers
-  const ivBuffer = hexToArrayBuffer(iv);
-  const encryptedDataBuffer = hexToArrayBuffer(encryptedData);
-  const tagBuffer = hexToArrayBuffer(tag);
+// Encrypt private key
+export async function encryptPrivateKey(privateKeyBase64, passphrase) {
 
-  // Combine encryptedData and tag for AES-GCM decryption
-  const combinedEncrypted = new Uint8Array(encryptedDataBuffer.byteLength + tagBuffer.byteLength);
-  combinedEncrypted.set(new Uint8Array(encryptedDataBuffer), 0);
-  combinedEncrypted.set(new Uint8Array(tagBuffer), encryptedDataBuffer.byteLength);
+  try{
+    // Convert private key from Base64 string to ArrayBuffer
+    const privateKeyBuffer = base64ToArrayBuffer(privateKeyBase64)
 
-  // Derive a key from the passphrase using PBKDF2
-  const keyMaterial = await getKeyMaterial(passphrase);
-  const key = await window.crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: new Uint8Array(16), // Use a fixed salt or retrieve it securely
-      iterations: 100000,
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["decrypt"]
-  );
 
-  try {
-    const decryptedBuffer = await window.crypto.subtle.decrypt(
+    // Generate random IV
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+    // Derive a key from the passphrase using PBKDF2
+    const keyMaterial = await getKeyMaterial(passphrase);
+      const key = await window.crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt: new Uint8Array(16), // Use a fixed salt or retrieve it securely
+          iterations: 100000,
+          hash: "SHA-256",
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt"]
+      );
+
+    // Encrypt private key using AES-GCM
+    const encryptedBuffer = await window.crypto.subtle.encrypt(
       {
         name: "AES-GCM",
-        iv: ivBuffer,
+        iv: iv,
         tagLength: 128,
       },
       key,
-      combinedEncrypted
+      privateKeyBuffer
     );
+  
+    // Get the encrypted data and the auth tag separately
+    const encryptedData = new Uint8Array(encryptedBuffer);
+    const tag = encryptedData.slice(encryptedData.length - 16); // tag is 16 bytes long in AES-GCM with a tagLength of 128
+    const actualEncryptedData = encryptedData.slice(0, encryptedData.length - 16);
 
-    const decoder = new TextDecoder();
-    return decoder.decode(decryptedBuffer);
-  } catch (error) {
-    console.error('Private key decryption failed:', error);
-    throw new Error('Failed to decrypt private key.');
+      // Convert to hex strings for storage
+      const ivHex = arrayBufferToHex(iv);
+      const encryptedDataHex = arrayBufferToHex(actualEncryptedData);
+      const tagHex = arrayBufferToHex(tag);
+
+
+    return {
+      iv: ivHex,
+      encryptedData: encryptedDataHex,
+      tag: tagHex,
+    };
+  }
+  catch (error) {
+      console.error("Error encrypting private key:", error);
+    throw error;
   }
 }
 
+// Decrypt the encryptedPrivateKey using user-provided passphrase
+export async function decryptPrivateKey(encrypted, passphrase) {
+    const { iv, encryptedData, tag } = encrypted;
+    
+    // Convert hex strings to ArrayBuffers
+    const ivBuffer = hexToArrayBuffer(iv);
+    const encryptedDataBuffer = hexToArrayBuffer(encryptedData);
+    const tagBuffer = hexToArrayBuffer(tag);
+
+    // Combine encryptedData and tag for AES-GCM decryption
+    const combinedEncrypted = new Uint8Array(encryptedDataBuffer.byteLength + tagBuffer.byteLength);
+    combinedEncrypted.set(new Uint8Array(encryptedDataBuffer), 0);
+    combinedEncrypted.set(new Uint8Array(tagBuffer), encryptedDataBuffer.byteLength);
+
+    // Derive a key from the passphrase using PBKDF2
+    const keyMaterial = await getKeyMaterial(passphrase);
+    const key = await window.crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: new Uint8Array(16), // Use a fixed salt or retrieve it securely
+        iterations: 100000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["decrypt"]
+    );
+    
+      try {
+          const decryptedBuffer = await window.crypto.subtle.decrypt(
+              {
+              name: "AES-GCM",
+              iv: ivBuffer,
+              tagLength: 128,
+              },
+              key,
+              combinedEncrypted
+          );
+
+          const decoder = new TextDecoder();
+          return decoder.decode(decryptedBuffer);
+      } catch (error) {
+      console.error('Private key decryption failed:', error);
+      throw new Error('Failed to decrypt private key.');
+      }
+}
+
+
+
 // Helper function to derive key material from passphrase
 async function getKeyMaterial(passphrase) {
-  const encoder = new TextEncoder();
-  return await window.crypto.subtle.importKey(
-    "raw",
-    encoder.encode(passphrase),
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
+    const encoder = new TextEncoder();
+    return await window.crypto.subtle.importKey(
+        "raw",
+        encoder.encode(passphrase),
+        { name: "PBKDF2" },
+        false,
+        ["deriveKey"]
+    );
 }
+
 
 // Helper function to convert hex string to ArrayBuffer
 function hexToArrayBuffer(hex) {
@@ -140,38 +201,9 @@ function hexToArrayBuffer(hex) {
   return buffer;
 }
 
-
-// Import Private Key for Decryption from Base64 string
-async function importPrivateKey(privateKeyBase64) {
-  try {
-    const binaryDerString = window.atob(privateKeyBase64);
-    const binaryDer = str2ab(binaryDerString);
-
-    const privateKey = await window.crypto.subtle.importKey(
-      "pkcs8",
-      binaryDer,
-      {
-        name: "RSA-OAEP",
-        hash: "SHA-256",
-      },
-      true, // Whether the key is extractable
-      ["decrypt"] // Key usages
-    );
-
-    return privateKey;
-  } catch (error) {
-    console.error('Importing private key failed:', error);
-    throw new Error('Invalid private key format.');
+// Helper function to convert ArrayBuffer to hex string
+function arrayBufferToHex(buffer) {
+    return Array.from(new Uint8Array(buffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
   }
-}
-
-
-// Helper function to convert string to ArrayBuffer
-function str2ab(str) {
-  const buf = new ArrayBuffer(str.length);
-  const bufView = new Uint8Array(buf);
-  for (let i = 0, len = str.length; i < len; i++) {
-    bufView[i] = str.charCodeAt(i);
-  }
-  return buf;
-}

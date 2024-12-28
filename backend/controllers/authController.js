@@ -128,60 +128,54 @@ exports.login = async (req, res) => {
   }
 };
 
-
-
-// Google Authentication
 exports.googleAuth = async (req, res) => {
-  const { credential, publicKey } = req.body;
-
+  const { credential, email, name, publicKey, encryptedPrivateKey } = req.body;
+  
   try {
-    if (!credential) {
-      return res.status(400).json({ message: 'Credential is required.' });
-    }
+    // Clean the publicKey
+    const cleanedPublicKey = publicKey
+      .replace('-----BEGIN PUBLIC KEY-----', '')
+      .replace('-----END PUBLIC KEY-----', '')
+      .trim();
 
-    // Verify the token with Google
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-
-    // Extract necessary information
-    const { sub: googleId, email, name, picture } = payload;
-
-    // Check if user already exists
-    let user = await User.findOne({ googleId });
-
+    // Check if user already exists by email
+    let user = await User.findOne({ email });
+    
     if (!user) {
-      // If not, check if a user with the same email exists
-      user = await User.findOne({ email });
-
-      if (user) {
-        // Link Google account to existing user
-        user.googleId = googleId;
-      } else {
-        // Create new user
-        user = new User({
-          username: name.replace(/\s+/g, '').toLowerCase(), // Simple username generation
-          email,
-          googleId,
-          publicKey, // Received from client
-        });
+      // Generate a unique username if the default one exists
+      let baseUsername = name;
+      let username = baseUsername;
+      let counter = 1;
+      
+      // Keep checking until we find a unique username
+      while (await User.findOne({ username })) {
+        username = `${baseUsername}${counter}`;
+        counter++;
       }
 
+      // Create new user following the schema
+      user = new User({
+        username,
+        email,
+        googleId: credential,
+        publicKey: cleanedPublicKey,
+        encryptedPrivateKey: JSON.stringify(encryptedPrivateKey),
+      });
+      
+      // Validate and save the new user
+      await user.validate();
       await user.save();
     }
 
-    // Generate JWT token without privateKey
+    // Generate JWT token
     const token = jwt.sign(
-      { 
-        userId: user._id, 
+      {
+        userId: user._id,
         username: user.username,
         email: user.email,
         publicKey: user.publicKey,
-      }, 
-      process.env.JWT_SECRET, 
+      },
+      process.env.JWT_SECRET,
       {
         expiresIn: '1d',
       }
@@ -190,10 +184,24 @@ exports.googleAuth = async (req, res) => {
     res.status(200).json({ token });
   } catch (error) {
     console.error('Google Auth Error:', error);
-    res.status(500).json({ message: 'Google authentication failed.' });
+    if (error.code === 11000) {
+      res.status(400).json({ 
+        message: 'Username or email already exists.' 
+      });
+    } else if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      res.status(400).json({ 
+        message: 'Validation error', 
+        errors: messages 
+      });
+    } else {
+      res.status(500).json({ 
+        message: 'Google authentication failed.',
+        error: error.message 
+      });
+    }
   }
 };
-
 
 
 // Forgot Password - Request Reset Link
@@ -300,6 +308,7 @@ exports.resetPassword = async (req, res) => {
 
 // Get Public Key Controller
 exports.getPublicKey = async (req, res) => {
+  console.log('user',req.params.username)
   try {
     const user = await User.findOne({ username: req.params.username });
     if (!user) {

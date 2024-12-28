@@ -66,6 +66,24 @@ async function decryptMessage(encryptedMessage, privateKey) {
 }
 
 
+// API endpoint to fetch anonymous messages
+exports.getAnonymousMessages = async (req, res) => {
+  try {
+    const userId = req.user._id; // Assuming you have the authenticated user's ID
+
+    const anonymousMessages = await Message.find({
+      recipient: userId,
+      sender: null
+    }).sort({ createdAt: -1 }); // Sort by newest first
+
+    res.status(200).json({ messages: anonymousMessages });
+  } catch (error) {
+    console.error('Error fetching anonymous messages:', error);
+    res.status(500).json({ message: 'Failed to fetch anonymous messages' });
+  }
+};
+
+
 
 exports.getSentMessages = async (req, res) => {
   try {

@@ -17,7 +17,7 @@ import { FaLock, FaUserSecret, FaUsers } from 'react-icons/fa';
     const { user } = useContext(AuthContext);
     const router = useRouter();
     const [dashboard, setDashboard] = useState(false);
-
+    console.log('user',user)
     useEffect(() => {
       if (user) {
         setDashboard(true);

@@ -187,7 +187,9 @@ export default function SendMessage() {
   }, [username]);
 
   const sendMessage = async () => {
+
     setStatus('Sending...');
+    console.log('message sending...')
     
     try {
       let encryptedMessage = message;
@@ -209,7 +211,7 @@ export default function SendMessage() {
       setStatus(data.status || 'Message sent successfully');
       setMessage('');
     } catch (error) {
-      setStatus('Error sending message');
+      setStatus(`Error sending message ${error}`);
       console.error('Send Message Error:', error);
     }
   };
