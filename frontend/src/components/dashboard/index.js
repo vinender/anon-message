@@ -2,10 +2,11 @@ import { useCallback, useContext, useEffect, useState } from 'react';
 import Navbar from '../navbar';
 import { AuthContext } from '../context/AuthContext';
 import API_BASE_URL from '../../utils/config';
-import { decryptMessage, decryptPrivateKey, getPrivateKey} from '@/utils/storage';
+import { decryptMessage, decryptPrivateKey} from '@/utils/crypto';
+import { getPrivateKey} from '@/utils/storage';
 
 import { useRouter } from 'next/router';
-
+// s
 
 
 export default function Dashboard() {
