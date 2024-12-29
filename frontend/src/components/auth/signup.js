@@ -56,13 +56,20 @@ export default function Signup() {
       try {
         // Generate RSA key pair
         const { publicKey, privateKey } = await generateRSAKeyPair();
-
+        console.log('Generated key pair:', {
+          hasPublicKey: !!publicKey,
+          hasPrivateKey: !!privateKey
+        });
         // Encrypt the private key using the secret
         const encryptedPrivateKeyData = await encryptPrivateKey(
           privateKey,
           process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
         );
-
+        console.log('Storing encrypted private key:', {
+          hasIv: !!encryptedPrivateKeyData.iv,
+          hasEncryptedData: !!encryptedPrivateKeyData.encryptedData,
+          hasSalt: !!encryptedPrivateKeyData.salt
+        });
         // Store the encrypted private key in IndexedDB
         await storePrivateKey(encryptedPrivateKeyData);
 
@@ -106,55 +113,52 @@ const handleGoogleSignup = async () => {
 
 
 useEffect(() => {
-    const handleGoogleRegistration = async () => {
-      if (session && !googleRegistrationCompleted) {
-            try {
-                // Generate RSA key pair
-                const { publicKey, privateKey } = await generateRSAKeyPair();
+  const handleGoogleRegistration = async () => {
+    if (session && !googleRegistrationCompleted) {
+          try {
+              // Generate RSA key pair
+              const { publicKey, privateKey } = await generateRSAKeyPair();
 
-                // Encrypt the private key using the secret
-                const encryptedPrivateKeyData = await encryptPrivateKey(
-                    privateKey,
-                    process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
-                );
+              // Encrypt the private key using the secret
+              const encryptedPrivateKeyData = await encryptPrivateKey(
+                  privateKey,
+                  process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
+              );
 
-                // Store the encrypted private key in IndexedDB
-                await storePrivateKey(encryptedPrivateKeyData);
-// sd
-                // Send public key and encrypted private key to the server
-                const res = await fetch('http://localhost:5000/api/auth/google', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    credential: session?.user?.id,
-                    name: session.user.name,
-                    email: session.user.email,
-                    publicKey,
-                    encryptedPrivateKey: encryptedPrivateKeyData,
-                }),
-                });
+              // Store the encrypted private key in IndexedDB
+              await storePrivateKey(encryptedPrivateKeyData);
+              // Send public key and encrypted private key to the server
+              const res = await fetch('http://localhost:5000/api/auth/google', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  credential: session?.user?.id,
+                  name: session.user.name,
+                  email: session.user.email,
+                  publicKey,
+                  encryptedPrivateKey: encryptedPrivateKeyData, // do not stringify this
+              }),
+              });
 
-                const data = await res.json();
+              const data = await res.json();
 
-                if (res.ok) {
-                    localStorage.setItem('token', data.token);
-                    setGoogleRegistrationCompleted(true);
-                    router.push('/');
-                } else {
-                setErrors({ apiError: data.message || 'Google registration failed.' });
-                }
+              if (res.ok) {
+                  localStorage.setItem('token', data.token);
+                  setGoogleRegistrationCompleted(true);
+                  router.push('/');
+              } else {
+              setErrors({ apiError: data.message || 'Google registration failed.' });
+              }
 
-            } catch (err) {
-                setErrors({ apiError: err.message || 'An error occurred during google registration.' });
-            } finally {
-                setIsGoogleLoading(false);
-            }
-        }
-    };
-    handleGoogleRegistration();
-    }, [session, router, googleRegistrationCompleted]);
-
-
+          } catch (err) {
+              setErrors({ apiError: err.message || 'An error occurred during google registration.' });
+          } finally {
+              setIsGoogleLoading(false);
+          }
+      }
+  };
+  handleGoogleRegistration();
+  }, [session, router, googleRegistrationCompleted]);
 
   return (
     <>

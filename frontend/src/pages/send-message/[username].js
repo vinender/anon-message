@@ -25,45 +25,63 @@ const arrayBufferToBase64 = (buffer) => {
   bytes.forEach((b) => binary += String.fromCharCode(b));
   return btoa(binary);
 };
+
+
+
+
 const encryptMessage = async (message, publicKey) => {
-  console.log(' message:', message);
-  console.log('Public key:', publicKey);
+  if (typeof window === 'undefined') return message;
   
-  if (typeof window !== 'undefined') {
-    try {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(message);
+  try {
+    console.log('Encryption starting:', {
+      message,
+      publicKeyLength: publicKey?.length
+    });
 
-      const importedPublicKey = await window.crypto.subtle.importKey(
-        "spki",
-        base64ToArrayBuffer(publicKey),
-        {
-          name: "RSA-OAEP",
-          hash: "SHA-256",
-        },
-        true,
-        ["encrypt"]
-      );
-      console.log('Imported key:', importedPublicKey);
+    // Create encoder and encode message
+    const encoder = new TextEncoder();
+    const messageBytes = encoder.encode(message);
+    
+    // Convert public key from base64 and import
+    const publicKeyBytes = base64ToArrayBuffer(publicKey);
+    const importedPublicKey = await window.crypto.subtle.importKey(
+      "spki",
+      publicKeyBytes,
+      {
+        name: "RSA-OAEP",
+        hash: { name: "SHA-256" }
+      },
+      true,
+      ["encrypt"]
+    );
+    
+    console.log('Public key imported successfully');
 
-      const encryptedData = await window.crypto.subtle.encrypt(
-        {
-          name: "RSA-OAEP"
-        },
-        importedPublicKey,
-        data
-      );
-
-      return arrayBufferToBase64(encryptedData);
-    } catch (error) {
-      console.error('Encryption failed:', error);
-      throw new Error(`Encryption failed: ${error.message}`);
-    }
+    // Encrypt the message
+    const encryptedBytes = await window.crypto.subtle.encrypt(
+      {
+        name: "RSA-OAEP",
+        hash: { name: "SHA-256" }
+      },
+      importedPublicKey,
+      messageBytes
+    );
+    
+    // Convert to base64
+    const encryptedBase64 = btoa(String.fromCharCode(...new Uint8Array(encryptedBytes)));
+    
+    console.log('Encryption completed:', {
+      originalLength: message.length,
+      encryptedLength: encryptedBase64.length
+    });
+    
+    return encryptedBase64;
+  } catch (error) {
+    console.error('Encryption failed:', error);
+    throw new Error(`Encryption failed: ${error.message}`);
   }
-
-  console.log('Message returned without encryption (server-side)');
-  return message; // Return unencrypted message if on server-side
 };
+
 
 export default function SendMessage() {
   const router = useRouter();
@@ -187,7 +205,6 @@ export default function SendMessage() {
   }, [username]);
 
   const sendMessage = async () => {
-
     setStatus('Sending...');
     console.log('message sending...')
     
@@ -211,7 +228,7 @@ export default function SendMessage() {
       setStatus(data.status || 'Message sent successfully');
       setMessage('');
     } catch (error) {
-      setStatus(`Error sending message ${error}`);
+      setStatus('Error sending message');
       console.error('Send Message Error:', error);
     }
   };

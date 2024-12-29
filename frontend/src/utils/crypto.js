@@ -1,64 +1,86 @@
 // utils/crypto.js
 
-// Utility function to convert ArrayBuffer to Base64 string
+// Base conversion utilities
 export function arrayBufferToBase64(buffer) {
   let binary = '';
   const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
+  for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
   return window.btoa(binary);
 }
 
-// Utility function to convert Base64 string to ArrayBuffer
-export function base64ToArrayBuffer(base64) {
-  try {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-  } catch (error) {
-    console.error('Base64 to ArrayBuffer conversion failed:', error);
-    throw new Error('Invalid key format.');
-  }
+// Helper function to properly pad base64 strings
+function padBase64(base64) {
+  return base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
 }
 
-// Generate RSA Key Pair and export to Base64 strings without PEM headers
+// Improved base64 conversion functions
+export function base64ToArrayBuffer(base64) {
+  try {
+    // Remove any whitespace and PEM headers
+    const cleanBase64 = base64
+      .replace(/[\s\-]/g, '')
+      .replace(/BEGIN.*?KEY\-+/, '')
+      .replace(/END.*?KEY\-+/, '');
+
+    // Add padding if necessary
+    const paddedBase64 = cleanBase64.padEnd(
+      cleanBase64.length + (4 - (cleanBase64.length % 4)) % 4,
+      '='
+    );
+
+    // Convert to binary string
+    const binaryString = atob(paddedBase64);
+    
+    // Convert to Uint8Array
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    return bytes.buffer;
+  } catch (error) {
+    console.error('Base64 conversion failed:', {
+      error,
+      inputLength: base64?.length,
+      inputSample: base64?.substring(0, 50)
+    });
+    throw error;
+  }
+}
+// Key material generation
+async function getKeyMaterial(passphrase) {
+  const encoder = new TextEncoder();
+  return await window.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(passphrase),
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+}
+
+// Core cryptographic functions
 export async function generateRSAKeyPair() {
   try {
-    // 1. Generate the RSA-OAEP key pair
     const keyPair = await window.crypto.subtle.generateKey(
       {
         name: "RSA-OAEP",
-        modulusLength: 2048, // Can be 1024, 2048, or 4096
-        publicExponent: new Uint8Array([1, 0, 1]), // 65537
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
         hash: "SHA-256",
       },
-      true, // Whether the key is extractable (i.e., can be used in exportKey)
-      ["encrypt", "decrypt"] // Can be any combination of "encrypt", "decrypt", "wrapKey", or "unwrapKey"
+      true,
+      ["encrypt", "decrypt"]
     );
 
-    // 2. Export the public key to SPKI format
-    const exportedPublicKey = await window.crypto.subtle.exportKey(
-      "spki",
-      keyPair.publicKey
-    );
-    const publicKeyBase64 = arrayBufferToBase64(exportedPublicKey);
-
-    // 3. Export the private key to PKCS8 format
-    const exportedPrivateKey = await window.crypto.subtle.exportKey(
-      "pkcs8",
-      keyPair.privateKey
-    );
-    const privateKeyBase64 = arrayBufferToBase64(exportedPrivateKey);
+    const exportedPublicKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+    const exportedPrivateKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
 
     return {
-      publicKey: publicKeyBase64,
-      privateKey: privateKeyBase64,
+      publicKey: arrayBufferToBase64(exportedPublicKey),
+      privateKey: arrayBufferToBase64(exportedPrivateKey)
     };
   } catch (error) {
     console.error("Error generating RSA key pair:", error);
@@ -66,34 +88,26 @@ export async function generateRSAKeyPair() {
   }
 }
 
-
-// Encrypt private key
 export async function encryptPrivateKey(privateKeyBase64, passphrase) {
-
-  try{
-    // Convert private key from Base64 string to ArrayBuffer
-    const privateKeyBuffer = base64ToArrayBuffer(privateKeyBase64)
-
-
-    // Generate random IV
+  try {
+    const privateKeyBuffer = base64ToArrayBuffer(privateKeyBase64);
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
-
-    // Derive a key from the passphrase using PBKDF2
+    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    
     const keyMaterial = await getKeyMaterial(passphrase);
-      const key = await window.crypto.subtle.deriveKey(
-        {
-          name: "PBKDF2",
-          salt: new Uint8Array(16), // Use a fixed salt or retrieve it securely
-          iterations: 100000,
-          hash: "SHA-256",
-        },
-        keyMaterial,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt"]
-      );
+    const key = await window.crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: 100000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt"]
+    );
 
-    // Encrypt private key using AES-GCM
     const encryptedBuffer = await window.crypto.subtle.encrypt(
       {
         name: "AES-GCM",
@@ -103,50 +117,29 @@ export async function encryptPrivateKey(privateKeyBase64, passphrase) {
       key,
       privateKeyBuffer
     );
-  
-    // Get the encrypted data and the auth tag separately
-    const encryptedData = new Uint8Array(encryptedBuffer);
-    const tag = encryptedData.slice(encryptedData.length - 16); // tag is 16 bytes long in AES-GCM with a tagLength of 128
-    const actualEncryptedData = encryptedData.slice(0, encryptedData.length - 16);
-
-      // Convert to hex strings for storage
-      const ivHex = arrayBufferToHex(iv);
-      const encryptedDataHex = arrayBufferToHex(actualEncryptedData);
-      const tagHex = arrayBufferToHex(tag);
-
 
     return {
-      iv: ivHex,
-      encryptedData: encryptedDataHex,
-      tag: tagHex,
+      iv: btoa(String.fromCharCode(...iv)),
+      encryptedData: btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer))),
+      salt: btoa(String.fromCharCode(...salt))
     };
-  }
-  catch (error) {
-      console.error("Error encrypting private key:", error);
+  } catch (error) {
+    console.error("Error encrypting private key:", error);
     throw error;
   }
 }
 
-// Decrypt the encryptedPrivateKey using user-provided passphrase
-export async function decryptPrivateKey(encrypted, passphrase) {
-    const { iv, encryptedData, tag } = encrypted;
-    
-    // Convert hex strings to ArrayBuffers
-    const ivBuffer = hexToArrayBuffer(iv);
-    const encryptedDataBuffer = hexToArrayBuffer(encryptedData);
-    const tagBuffer = hexToArrayBuffer(tag);
+export async function decryptPrivateKey(encryptedData, iv, salt, passphrase) {
+  try {
+    const ivArray = Uint8Array.from(atob(iv), c => c.charCodeAt(0));
+    const encryptedDataArray = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+    const saltArray = Uint8Array.from(atob(salt), c => c.charCodeAt(0));
 
-    // Combine encryptedData and tag for AES-GCM decryption
-    const combinedEncrypted = new Uint8Array(encryptedDataBuffer.byteLength + tagBuffer.byteLength);
-    combinedEncrypted.set(new Uint8Array(encryptedDataBuffer), 0);
-    combinedEncrypted.set(new Uint8Array(tagBuffer), encryptedDataBuffer.byteLength);
-
-    // Derive a key from the passphrase using PBKDF2
     const keyMaterial = await getKeyMaterial(passphrase);
     const key = await window.crypto.subtle.deriveKey(
       {
         name: "PBKDF2",
-        salt: new Uint8Array(16), // Use a fixed salt or retrieve it securely
+        salt: saltArray,
         iterations: 100000,
         hash: "SHA-256",
       },
@@ -155,55 +148,109 @@ export async function decryptPrivateKey(encrypted, passphrase) {
       false,
       ["decrypt"]
     );
-    
-      try {
-          const decryptedBuffer = await window.crypto.subtle.decrypt(
-              {
-              name: "AES-GCM",
-              iv: ivBuffer,
-              tagLength: 128,
-              },
-              key,
-              combinedEncrypted
-          );
 
-          const decoder = new TextDecoder();
-          return decoder.decode(decryptedBuffer);
-      } catch (error) {
-      console.error('Private key decryption failed:', error);
-      throw new Error('Failed to decrypt private key.');
-      }
-}
-
-
-
-// Helper function to derive key material from passphrase
-async function getKeyMaterial(passphrase) {
-    const encoder = new TextEncoder();
-    return await window.crypto.subtle.importKey(
-        "raw",
-        encoder.encode(passphrase),
-        { name: "PBKDF2" },
-        false,
-        ["deriveKey"]
+    const decryptedBuffer = await crypto.subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv: ivArray,
+      },
+      key,
+      encryptedDataArray
     );
+
+    return arrayBufferToBase64(decryptedBuffer);
+  } catch (error) {
+    console.error('Decryption failed:', error);
+    throw error;
+  }
+}
+// Add this helper function to format PEM key
+function addPEMFormatting(base64Key) {
+  return `-----BEGIN PRIVATE KEY-----\n${base64Key}\n-----END PRIVATE KEY-----`;
 }
 
-
-// Helper function to convert hex string to ArrayBuffer
-function hexToArrayBuffer(hex) {
-  if (hex.length % 2 !== 0) throw new Error('Invalid hex string');
-  const buffer = new ArrayBuffer(hex.length / 2);
-  const view = new Uint8Array(buffer);
-  for (let i = 0; i < hex.length; i += 2) {
-    view[i / 2] = parseInt(hex.substr(i, 2), 16);
+// Add this function to check if a string is valid base64
+function isValidBase64(str) {
+  try {
+    return btoa(atob(str)) === str;
+  } catch (e) {
+    return false;
   }
-  return buffer;
+}
+async function importPrivateKey(privateKeyBase64) {
+  try {
+    // Clean the key string
+    const cleanKey = privateKeyBase64
+      .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+      .replace(/-----END PRIVATE KEY-----/g, '')
+      .replace(/[\r\n\s]/g, '');
+
+    // Convert to binary
+    const binaryString = atob(cleanKey);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    // Import the key
+    return await window.crypto.subtle.importKey(
+      "pkcs8",
+      bytes.buffer,
+      {
+        name: "RSA-OAEP",
+        hash: { name: "SHA-256" }
+      },
+      true,
+      ["decrypt"]
+    );
+  } catch (error) {
+    console.error('Private key import failed:', error);
+    throw error;
+  }
 }
 
-// Helper function to convert ArrayBuffer to hex string
-function arrayBufferToHex(buffer) {
-    return Array.from(new Uint8Array(buffer))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+export async function decryptMessage(encryptedContent, privateKeyBase64) {
+  try {
+    console.log('Starting decryption:', {
+      encryptedLength: encryptedContent?.length,
+      privateKeyLength: privateKeyBase64?.length
+    });
+
+    // Import private key
+    const privateKey = await importPrivateKey(privateKeyBase64);
+    console.log('Private key imported successfully');
+
+    // Convert encrypted content from base64 to bytes
+    const encryptedBytes = new Uint8Array(
+      atob(encryptedContent).split('').map(char => char.charCodeAt(0))
+    ).buffer;
+
+    console.log('Encrypted content prepared:', {
+      byteLength: encryptedBytes.byteLength
+    });
+
+    // Decrypt the content
+    const decryptedBytes = await window.crypto.subtle.decrypt(
+      {
+        name: "RSA-OAEP",
+        hash: { name: "SHA-256" }
+      },
+      privateKey,
+      encryptedBytes
+    );
+
+    // Decode the result
+    const decryptedText = new TextDecoder().decode(decryptedBytes);
+    console.log('Decryption successful');
+    
+    return decryptedText;
+  } catch (error) {
+    console.error('Decryption failed:', {
+      error,
+      errorType: error.constructor.name,
+      errorMessage: error.message,
+      encryptedContentSample: encryptedContent?.substring(0, 50)
+    });
+    throw error;
   }
+}

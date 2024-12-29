@@ -128,9 +128,10 @@ exports.login = async (req, res) => {
   }
 };
 
+
+
 exports.googleAuth = async (req, res) => {
   const { credential, email, name, publicKey, encryptedPrivateKey } = req.body;
-  
   try {
     // Clean the publicKey
     const cleanedPublicKey = publicKey
@@ -202,6 +203,7 @@ exports.googleAuth = async (req, res) => {
     }
   }
 };
+
 
 
 // Forgot Password - Request Reset Link
