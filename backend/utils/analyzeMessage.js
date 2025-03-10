@@ -1,51 +1,59 @@
 // utils/analyzeMessage.js
-const OpenAI = require('openai');
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // Use the API key from the .env file
-});
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+// Access your API key as an environment variable
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
+
+// Modified function with enhanced prompt and parsing
 async function analyzeMessage(message) {
   try {
-    // Prepare the system message
-    const systemMessage = {
-      role: "system",
-      content: `You are an AI assistant that helps with sentiment analysis for a given message. 
-      Please analyze the following message and determine if it is negative or positive for a person: "${message}"`,
-    };
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    
+    // Enhanced prompt using examples and clear format instructions
+    const prompt = `CONTENT MODERATION TASK
 
-    // Prepare the user message
-    const userMessage = {
-      role: "user",
-      content: message,
-    };
+Your job is to classify messages as "NEGATIVE" if they contain ANY of the following:
+- Profanity or swear words (fuck, shit, etc.)
+- Insults (idiot, stupid, etc.)
+- Hate speech
+- Threats
+- Harassment
+- Bullying
 
-    // Call the OpenAI API
-    const response = await openai.chat.completions.create({
-      model: "gpt-4", // Use a valid model name
-      messages: [systemMessage, userMessage],
-    });
+Examples of NEGATIVE content:
+"fuck you" -> NEGATIVE
+"you're an idiot" -> NEGATIVE
+"I hate those people" -> NEGATIVE
 
-    console.log('OpenAI response:', response);
+Examples of NEUTRAL/POSITIVE content:
+"Have a good day" -> POSITIVE
+"The weather is nice" -> NEUTRAL
+"Thank you for your help" -> POSITIVE
 
-    // Extract the assistant's reply
-    const assistantReply = response.choices[0].message.content.trim();
+Classify this message: "${message}"
 
-    // Implement your logic based on the assistant's reply
-    // For example, you can check if the assistant indicates the message is appropriate
+IMPORTANT: Respond ONLY with "NEGATIVE", "NEUTRAL", or "POSITIVE". No other text.`;
 
-    // Example logic:
-    if (
-      assistantReply.toLowerCase().includes("appropriate") ||
-      assistantReply.toLowerCase().includes("positive")
-    ) {
-      return true; // The message is appropriate to send
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim().toUpperCase();
+    
+    console.log('Gemini response:', text);
+    
+    // Stricter matching
+    if (text.includes("NEGATIVE")) {
+      return false;
+    } else if (text.includes("POSITIVE") || text.includes("NEUTRAL")) {
+      return true;
     } else {
-      return false; // The message is not appropriate to send
+      // Default to treating as inappropriate when uncertain
+      console.warn("Unexpected Gemini response. Treating as inappropriate:", text);
+      return false;
     }
   } catch (error) {
-    console.error('OpenAI API Error:', error);
-    // Handle the error as needed
-    return false; // Default to false in case of error
+    // Your existing error handling is good
+    console.error('Gemini API Error:', error);
+    return false;
   }
 }
 

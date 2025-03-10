@@ -102,7 +102,7 @@ export default function Home() {
                     href="/signup"
                     className="w-full sm:w-auto bg-gradient-to-r from-indigo-500 to-teal-400 px-8 py-3.5 rounded-lg text-sm font-medium shadow-lg shadow-teal-500/20 transition duration-300 ease-in-out hover:shadow-teal-500/40"
                   >
-                    Get Started — It's Free
+                    {`Get Started — It's Free`}
                   </Link>
                   <Link
                     href="/how-it-works"
@@ -238,7 +238,7 @@ export default function Home() {
                 {[
                   {
                     question: 'Is AnonMessage really anonymous?',
-                    answer: 'Yes, we don\'t collect any identifying information. Your messages are fully anonymous.'
+                    answer: 'Yes, we do not collect any identifying information. Your messages are fully anonymous.'
                   },
                   {
                     question: 'How secure is the encryption?',
@@ -246,7 +246,7 @@ export default function Home() {
                   },
                   {
                     question: 'Can messages be traced back to me?',
-                    answer: 'No. We don\'t store IP addresses or any data that could identify message senders.'
+                    answer: 'No. We do not store IP addresses or any data that could identify message senders.'
                   },
                   {
                     question: 'Is AnonMessage free to use?',
@@ -274,7 +274,7 @@ export default function Home() {
                     Ready to communicate <span className="text-teal-400">without boundaries</span>?
                   </h3>
                   <p className="text-slate-400 mb-8 max-w-xl mx-auto">
-                    Join thousands of users who've discovered the freedom of anonymous communication.
+                    Join thousands of users who have discovered the freedom of anonymous communication
                   </p>
                   <Link
                     href="/signup"
@@ -303,18 +303,18 @@ export default function Home() {
                   </p>
                 </div>
                 
-                <div>
-                  <h5 className="text-sm font-semibold mb-4">Legal</h5>
-                  <ul className="space-y-2">
-                    {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item, i) => (
-                      <li key={i}>
-                        <Link href="#" className="text-sm text-slate-400 hover:text-teal-400 transition">
-                          {item}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  <div>
+                    <h5 className="text-sm font-semibold mb-4">Legal</h5>
+                    <ul className="space-y-2">
+                      {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item, i) => (
+                        <li key={i}>
+                          <Link href="#" className="text-sm text-slate-400 hover:text-teal-400 transition">
+                            {item}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 
                 <div>
                   <h5 className="text-sm font-semibold mb-4">Company</h5>
@@ -378,7 +378,7 @@ const TestimonialCard = ({ quote, name, role }) => (
         <span key={i} className="text-lg">★</span>
       ))}
     </div>
-    <p className="mb-6 text-slate-300 leading-relaxed">"{quote}"</p>
+    <p className="mb-6 text-slate-300 leading-relaxed">{"{quote}"}</p>
     <div className="flex items-center">
       <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-teal-400 flex items-center justify-center text-sm font-bold">
         {name.charAt(0)}

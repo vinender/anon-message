@@ -5,6 +5,7 @@ const analyzeMessage = require('../utils/analyzeMessage');
 const crypto = require('crypto');
 
 
+
 exports.sendMessage = async (req, res) => {
   const { encryptedMessage, recipientUsername } = req.body;
   try {
@@ -14,24 +15,30 @@ exports.sendMessage = async (req, res) => {
       return res.status(404).json({ message: 'Recipient not found.' });
     }
 
+    // Analyze sentiment
+    const isAppropriate = await analyzeMessage(encryptedMessage);
+    console.log('is appropriate', isAppropriate); // Better variable name
 
-      // Analyze sentiment
-      const isPositive = await analyzeMessage(encryptedMessage);
-      console.log('is postive',isPositive)
-
-    // Save encrypted message
-    const newMessage = new Message({
-      content: encryptedMessage,
-      recipient: recipient._id,
-      sender: req.user ? req.user._id : null,
-    });
-    await newMessage.save();
-    res.json({ status: 'Message sent!' });
+    // Conditional message saving based on sentiment analysis
+    if (isAppropriate) {  //Use the 'isAppropriate' result
+      // Save encrypted message
+      const newMessage = new Message({
+        content: encryptedMessage,
+        recipient: recipient._id,
+        sender: req.user ? req.user._id : null,
+      });
+      await newMessage.save();
+      res.json({ status: 'Message sent!' });
+    } else {
+      // Return a specific error message if the sentiment is negative
+      res.status(400).json({ message: 'Message not sent: The message content was deemed negative.' }); //Clearer message
+    }
   } catch (error) {
     console.error('Send Message Error:', error);
     res.status(500).json({ message: 'Error sending message.' });
   }
 };
+
 
 exports.getMessages = async (req, res) => {
   try {

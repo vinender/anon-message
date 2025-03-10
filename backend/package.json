@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@cashfreepayments/cashfree-js": "^1.0.4",
+    "@google/generative-ai": "^0.24.0",
     "@mongodb-js/saslprep": "^1.1.4",
     "aws-sdk": "^2.1539.0",
     "axios": "^1.6.5",

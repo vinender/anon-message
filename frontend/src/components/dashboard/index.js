@@ -306,7 +306,7 @@ export default function Dashboard() {
                         </div>
                         <p className="text-lg font-medium mb-2">No messages yet</p>
                         <p className="text-sm text-center max-w-md">
-                          Share your link with friends to start receiving anonymous messages. They'll be encrypted and only visible to you.
+                          Share your link with friends to start receiving anonymous messages. They will be be encrypted and only visible to you.
                         </p>
                       </div>
                     )}
