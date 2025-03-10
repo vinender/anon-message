@@ -6,13 +6,16 @@ import Link from 'next/link';
 import { decryptPrivateKey } from '@/utils/crypto';
 import { getPrivateKey } from '@/utils/storage';
 import { useRouter } from 'next/router';
+import { motion } from 'framer-motion';
+import { FaLock, FaEyeSlash, FaEye } from 'react-icons/fa';
 
 export default function Login() {
   const { login } = useContext(AuthContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [passphrase, setPassphrase] = useState(''); // Prompt user for passphrase
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e) => {
@@ -32,6 +35,7 @@ export default function Login() {
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length === 0) {
+      setIsLoading(true);
       try {
         await login(username, password);
 
@@ -48,106 +52,159 @@ export default function Login() {
 
         const decryptedPrivateKey = await decryptPrivateKey(encryptedData, userPassphrase);
 
-        // Store decrypted privateKey securely in memory or appropriate state
-        // For example, set it in AuthContext or a separate state
-        // Here, we'll set it in the user state (assuming AuthContext allows it)
-        // Modify AuthContext to handle setting privateKey if necessary
+        // For demonstration, we'll store it securely (not in localStorage in production)
+        localStorage.setItem('privateKey', decryptedPrivateKey);
 
-        // Example:
-        // setUser((prevUser) => ({ ...prevUser, privateKey: decryptedPrivateKey }));
-
-        // For demonstration, we'll store it in a global variable or secure context
-        localStorage.setItem('privateKey', decryptedPrivateKey); // Not recommended, better to use in-memory storage
-
-        // Redirect to dashboard or desired page
+        // Redirect to dashboard
         router.push('/');
       } catch (err) {
         setErrors({ apiError: err.message });
+        setIsLoading(false);
       }
     }
   };
 
-
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
   return (
-    <>
+    <div className="min-h-screen bg-slate-950 text-gray-100 font-sans">
       <Navbar />
-      <div className="flex items-center justify-center min-h-screen bg-black text-gray-100 px-4">
-        <div className="max-w-md w-full space-y-8">
-          <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-cyan-400">
-              Log in to your account
+      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-md w-full space-y-8"
+        >
+          <div className="text-center">
+            <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-teal-400 flex items-center justify-center mb-6">
+              <FaLock className="text-white text-xl" />
+            </div>
+            <h2 className="text-3xl font-bold text-white">
+              Welcome Back
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-400">
-              {`Don't have an account?`}{' '}
-              <Link href="/signup" className="font-medium text-cyan-400 hover:text-cyan-300">
-                Sign up
-              </Link>
+            <p className="mt-3 text-slate-400">
+              Log in to access your anonymous messages
             </p>
           </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-            {errors.apiError && (
-              <div className="bg-red-900 text-red-200 p-3 rounded">
-                {errors.apiError}
-              </div>
-            )}
-            <div className="rounded-md shadow-sm -space-y-px">
-              <div>
-                <label htmlFor="username" className="sr-only">
-                  Username
-                </label>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  autoComplete="username"
-                  required
-                  className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
-                    errors.username ? 'border-red-500' : 'border-gray-600'
-                  } bg-gray-800 placeholder-gray-400 text-white rounded-t-md focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 focus:z-10 sm:text-sm`}
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-                {errors.username && (
-                  <p className="text-red-400 text-sm mt-1">{errors.username}</p>
+          <div className="mt-10">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-teal-400/10 rounded-xl blur-xl"></div>
+              <div className="relative bg-slate-900/80 backdrop-blur-sm p-8 rounded-xl border border-slate-800">
+                {errors.apiError && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 bg-red-500/10 border border-red-500/20 text-red-200 p-4 rounded-lg"
+                  >
+                    <p className="text-sm font-medium">{errors.apiError}</p>
+                  </motion.div>
                 )}
-              </div>
-              <div>
-                <label htmlFor="password" className="sr-only">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
-                    errors.password ? 'border-red-500' : 'border-gray-600'
-                  } bg-gray-800 placeholder-gray-400 text-white rounded-b-md focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 focus:z-10 sm:text-sm`}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                {errors.password && (
-                  <p className="text-red-400 text-sm mt-1">{errors.password}</p>
-                )}
-              </div>
-            </div>
+                
+                <form className="space-y-6" onSubmit={handleLogin}>
+                  <div>
+                    <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
+                      Username
+                    </label>
+                    <input
+                      id="username"
+                      name="username"
+                      type="text"
+                      autoComplete="username"
+                      required
+                      className={`appearance-none block w-full px-4 py-3 rounded-lg ${
+                        errors.username ? 'border-red-500 bg-red-500/5' : 'border-slate-700 bg-slate-800/50'
+                      } border placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-transparent transition duration-200`}
+                      placeholder="Enter your username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                    />
+                    {errors.username && (
+                      <p className="text-red-400 text-xs mt-1">{errors.username}</p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        required
+                        className={`appearance-none block w-full px-4 py-3 rounded-lg ${
+                          errors.password ? 'border-red-500 bg-red-500/5' : 'border-slate-700 bg-slate-800/50'
+                        } border placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-transparent transition duration-200`}
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                      <button 
+                        type="button" 
+                        onClick={togglePasswordVisibility}
+                        className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-teal-400 transition"
+                      >
+                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-red-400 text-xs mt-1">{errors.password}</p>
+                    )}
+                    
+                    <div className="flex justify-end mt-2">
+                      <Link href="/forgot-password" className="text-xs font-medium text-teal-400 hover:text-teal-300 transition">
+                        Forgot password?
+                      </Link>
+                    </div>
+                  </div>
 
-            <div>
-              <button
-                type="submit"
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-black bg-cyan-400 hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500"
-              >
-                Log In
-              </button>
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="group relative w-full flex justify-center py-3 px-4 bg-gradient-to-r from-indigo-500 to-teal-400 text-sm font-medium rounded-lg text-white shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-70"
+                    >
+                      {isLoading ? (
+                        <span className="animate-pulse">Logging in...</span>
+                      ) : (
+                        "Sign in to your account"
+                      )}
+                    </button>
+                  </div>
+                </form>
+                
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-slate-400">
+                    Don't have an account?{' '}
+                    <Link href="/signup" className="font-medium text-teal-400 hover:text-teal-300 transition">
+                      Create an account
+                    </Link>
+                  </p>
+                </div>
+              </div>
             </div>
-          </form>
-        </div>
+            
+            <div className="mt-8 text-center">
+              <p className="text-xs text-slate-500">
+                By logging in, you agree to our{' '}
+                <Link href="/terms" className="text-teal-400 hover:text-teal-300">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-teal-400 hover:text-teal-300">
+                  Privacy Policy
+                </Link>
+              </p>
+            </div>
+          </div>
+        </motion.div>
       </div>
-    </>
+    </div>
   );
 }
