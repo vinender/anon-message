@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '../../components/navbar';
 import API_BASE_URL from '../../utils/config';
- 
-// Utility functions
+import { motion } from 'framer-motion';
+import { FaLock, FaPaperPlane, FaTimesCircle } from 'react-icons/fa';
+
+// Utility functions remain the same
 const base64ToArrayBuffer = (base64) => {
   try {
     const binaryString = atob(base64);
@@ -25,9 +27,6 @@ const arrayBufferToBase64 = (buffer) => {
   bytes.forEach((b) => binary += String.fromCharCode(b));
   return btoa(binary);
 };
-
-
-
 
 const encryptMessage = async (message, publicKey) => {
   if (typeof window === 'undefined') return message;
@@ -82,7 +81,6 @@ const encryptMessage = async (message, publicKey) => {
   }
 };
 
-
 export default function SendMessage() {
   const router = useRouter();
   const { username } = router.query;
@@ -90,7 +88,7 @@ export default function SendMessage() {
   const [publicKey, setPublicKey] = useState('');
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('');
-  const [activeTab, setActiveTab] = useState('positive');
+  const [isLoading, setIsLoading] = useState(false);
 
   const messages = {
     IT: {
@@ -163,8 +161,6 @@ export default function SendMessage() {
     }
   };
 
-
- 
   const [activeDepartment, setActiveDepartment] = useState('IT');
   const [activeCategory, setActiveCategory] = useState('Feedback');
   const [selectedMessage, setSelectedMessage] = useState('');
@@ -205,6 +201,7 @@ export default function SendMessage() {
   }, [username]);
 
   const sendMessage = async () => {
+    setIsLoading(true);
     setStatus('Sending...');
     console.log('message sending...')
     
@@ -227,116 +224,181 @@ export default function SendMessage() {
       const data = await res.json();
       setStatus(data.status || 'Message sent successfully');
       setMessage('');
+      setSelectedMessage('');
     } catch (error) {
-      setStatus('Error sending message');
+      setStatus('Error sending message: ' + error.message);
       console.error('Send Message Error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-400 via-cyan-800 to-red-500 p-8">
-      
-      <div className="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-4xl mx-auto">
-        <div className="p-8">
-          <h1 className="text-3xl font-extrabold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-cyan-800">
-            Send an Anonymous Message to {username}
-          </h1>
-          
-          <div className="mb-6">
-            <h2 className="text-xl font-bold mb-4 text-gray-700">Choose a Department</h2>
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(messages).map((department) => (
-                <button
-                  key={department}
-                  onClick={() => setActiveDepartment(department)}
-                  className={`px-4 py-2 rounded-full transition-all duration-300 ${
-                    activeDepartment === department
-                      ? 'bg-cyan-500 text-white shadow-lg transform -translate-y-1'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {department}
-                </button>
-              ))}
+    <div className="min-h-screen bg-slate-950 text-gray-100 font-sans">
+      <Navbar />
+      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-2xl w-full space-y-8"
+        >
+          <div className="text-center">
+            <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-teal-400 flex items-center justify-center mb-6">
+              <FaLock className="text-white text-xl" />
             </div>
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-xl font-bold mb-4 text-gray-700">Select a Category</h2>
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(messages[activeDepartment]).map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setActiveCategory(category)}
-                  className={`px-4 py-2 rounded-full transition-all duration-300 ${
-                    activeCategory === category
-                      ? 'bg-cyan-800 text-white shadow-lg transform -translate-y-1'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-xl font-bold mb-4 text-gray-700">Sample Messages</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-64 overflow-y-auto pr-2">
-              {messages[activeDepartment][activeCategory].map((msg, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleSampleMessageClick(msg)}
-                  className="text-left text-sm bg-gray-100 text-gray-700 p-3 rounded-lg hover:bg-gray-200 transition-colors duration-300 hover:shadow-md"
-                >
-                  {msg}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <textarea
-                className="w-full text-gray-700 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-300 ease-in-out"
-                rows="5"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Your message..."
-                required
-              />
-              {selectedMessage && (
-                <button
-                  type="button"
-                  onClick={handleRemoveMessage}
-                  className="absolute top-2 right-2 text-red-500 hover:text-red-700 transition-colors duration-300"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-cyan-500 to-cyan-800 text-white py-3 px-4 rounded-lg font-bold hover:from-cyan-600 hover:to-cyan-800 transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50"
-            >
+            <h2 className="text-3xl font-bold text-white">
               Send Anonymous Message
-            </button>
-          </form>
-          
-          {status && (
-            <div 
-              className={`mt-4 text-center ${
-                status.includes('Error') ? 'text-red-600' : 'text-green-600'
-              } font-semibold bg-opacity-20 p-3 rounded-md ${
-                status.includes('Error') ? 'bg-red-100' : 'bg-green-100'
-              }`}
-            >
-              {status}
+            </h2>
+            <p className="mt-3 text-slate-400">
+              {username ? `To: ${username}` : 'Loading recipient...'}
+            </p>
+          </div>
+
+          <div className="mt-10">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-teal-400/10 rounded-xl blur-xl"></div>
+              <div className="relative bg-slate-900/80 backdrop-blur-sm p-8 rounded-xl border border-slate-800">
+                {status && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mb-6 ${
+                      status.includes('Error') 
+                        ? 'bg-red-500/10 border border-red-500/20 text-red-200' 
+                        : 'bg-green-500/10 border border-green-500/20 text-green-200'
+                    } p-4 rounded-lg`}
+                  >
+                    <p className="text-sm font-medium">{status}</p>
+                  </motion.div>
+                )}
+                
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Select Department
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.keys(messages).map((department) => (
+                          <button
+                            type="button"
+                            key={department}
+                            onClick={() => setActiveDepartment(department)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                              activeDepartment === department
+                                ? 'bg-gradient-to-r from-indigo-500 to-teal-400 text-white shadow-lg shadow-teal-500/20'
+                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                            }`}
+                          >
+                            {department}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Select Category
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.keys(messages[activeDepartment]).map((category) => (
+                          <button
+                            type="button"
+                            key={category}
+                            onClick={() => setActiveCategory(category)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                              activeCategory === category
+                                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20'
+                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                            }`}
+                          >
+                            {category}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Sample Messages
+                      </label>
+                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800">
+                        {messages[activeDepartment][activeCategory].map((msg, index) => (
+                          <button
+                            type="button"
+                            key={index}
+                            onClick={() => handleSampleMessageClick(msg)}
+                            className={`text-left text-xs p-3 rounded-lg transition-all duration-200 ${
+                              selectedMessage === msg
+                                ? 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-200'
+                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                            }`}
+                          >
+                            {msg}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="message" className="block text-sm font-medium text-slate-300 mb-2">
+                        Your Message
+                      </label>
+                      <div className="relative">
+                        <textarea
+                          id="message"
+                          name="message"
+                          rows="4"
+                          className="appearance-none block w-full px-4 py-3 rounded-lg border-slate-700 bg-slate-800/50 border placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-transparent transition duration-200"
+                          placeholder="Write your anonymous message..."
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          required
+                        />
+                        {selectedMessage && (
+                          <button 
+                            type="button" 
+                            onClick={handleRemoveMessage}
+                            className="absolute top-2 right-2 text-slate-400 hover:text-red-400 transition-colors"
+                          >
+                            <FaTimesCircle />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={isLoading || !message.trim()}
+                      className="group relative w-full flex justify-center py-3 px-4 bg-gradient-to-r from-indigo-500 to-teal-400 text-sm font-medium rounded-lg text-white shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-70"
+                    >
+                      {isLoading ? (
+                        <span className="animate-pulse">Sending message...</span>
+                      ) : (
+                        <span className="flex items-center">
+                          <FaPaperPlane className="mr-2" /> 
+                          Send Anonymous Message
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-          )}
-        </div>
+            
+            <div className="mt-8 text-center">
+              <p className="text-xs text-slate-500">
+                By sending this message, you agree that the content follows our{' '}
+                <a href="/guidelines" className="text-teal-400 hover:text-teal-300">
+                  Community Guidelines
+                </a>
+              </p>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
