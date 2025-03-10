@@ -378,7 +378,7 @@ const TestimonialCard = ({ quote, name, role }) => (
         <span key={i} className="text-lg">★</span>
       ))}
     </div>
-    <p className="mb-6 text-slate-300 leading-relaxed">{"{quote}"}</p>
+    <p className="mb-6 text-slate-300 leading-relaxed">"{quote}"</p>
     <div className="flex items-center">
       <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-teal-400 flex items-center justify-center text-sm font-bold">
         {name.charAt(0)}
