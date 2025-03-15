@@ -11,8 +11,9 @@ import { storePrivateKey } from '@/utils/storage';
 import { motion } from 'framer-motion';
 import { FaUserPlus, FaEye, FaEyeSlash } from 'react-icons/fa';
 
+
+
 export default function Signup() {
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -21,9 +22,10 @@ export default function Signup() {
   const [errors, setErrors] = useState({});
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [isSubmittingForm, setIsSubmittingForm] = useState(false);
-  const [googleRegistrationCompleted, setGoogleRegistrationCompleted] = useState(false);
+  const [googleRegistrationAttempted, setGoogleRegistrationAttempted] = useState(false); // Corrected variable name
+
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -37,13 +39,6 @@ export default function Signup() {
     e.preventDefault();
     setIsSubmittingForm(true);
     const validationErrors = {};
-
-    // Validate username
-    // if (!username.trim()) {
-    //   validationErrors.username = 'Username is required.';
-    // } else if (username.length < 3) {
-    //   validationErrors.username = 'Username must be at least 3 characters.';
-    // }
 
     // Validate email
     if (!email.trim()) {
@@ -67,13 +62,13 @@ export default function Signup() {
       try {
         // Generate RSA key pair
         const { publicKey, privateKey } = await generateRSAKeyPair();
-        
+
         // Encrypt the private key using the secret
         const encryptedPrivateKeyData = await encryptPrivateKey(
           privateKey,
           process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
         );
-        
+
         // Store the encrypted private key in IndexedDB
         await storePrivateKey(encryptedPrivateKeyData);
 
@@ -82,7 +77,6 @@ export default function Signup() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            // username,
             email,
             password,
             publicKey,
@@ -111,58 +105,67 @@ export default function Signup() {
   const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
     signIn('google', {
-      callbackUrl: '/signup',
-      redirect: true,
+      callbackUrl: '/', // Redirect to homepage after successful Google sign-in *and* registration
     });
   };
 
+
   useEffect(() => {
     const handleGoogleRegistration = async () => {
-      if (session && !googleRegistrationCompleted) {
-        try {
-          // Generate RSA key pair
-          const { publicKey, privateKey } = await generateRSAKeyPair();
+        // Only proceed if user is authenticated via Google and registration hasn't been attempted
+        if (status === "authenticated" && !googleRegistrationAttempted) {
+            setGoogleRegistrationAttempted(true); // Set to true immediately to prevent multiple calls
 
-          // Encrypt the private key using the secret
-          const encryptedPrivateKeyData = await encryptPrivateKey(
-            privateKey,
-            process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
-          );
+            try {
+                // Generate RSA key pair
+                const { publicKey, privateKey } = await generateRSAKeyPair();
 
-          // Store the encrypted private key in IndexedDB
-          await storePrivateKey(encryptedPrivateKeyData);
-          
-          // Send public key and encrypted private key to the server
-          const res = await fetch('http://localhost:5000/api/auth/google', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              credential: session?.user?.id,
-              name: session.user.name,
-              email: session.user.email,
-              publicKey,
-              encryptedPrivateKey: encryptedPrivateKeyData,
-            }),
-          });
+                // Encrypt the private key
+                const encryptedPrivateKeyData = await encryptPrivateKey(
+                    privateKey,
+                    process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
+                );
 
-          const data = await res.json();
+                // Store the encrypted private key in IndexedDB
+                await storePrivateKey(encryptedPrivateKeyData);
 
-          if (res.ok) {
-            localStorage.setItem('token', data.token);
-            setGoogleRegistrationCompleted(true);
-            router.push('/');
-          } else {
-            setErrors({ apiError: data.message || 'Google registration failed.' });
-          }
-        } catch (err) {
-          setErrors({ apiError: err.message || 'An error occurred during google registration.' });
-        } finally {
-          setIsGoogleLoading(false);
+                // Send public key and encrypted private key to the server
+                const res = await fetch('http://localhost:5000/api/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        credential: session?.user?.id,  // or some other unique identifier
+                        name: session.user.name,
+                        email: session.user.email,
+                        publicKey,
+                        encryptedPrivateKey: encryptedPrivateKeyData,
+                    }),
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('token', data.token); // Consider more secure storage
+                    router.push('/'); // Redirect only after successful registration
+                } else {
+                    setErrors({ apiError: data.message || 'Google registration failed.' });
+                     // Sign out the user if registration fails
+                    await signOut();
+
+                }
+            } catch (err) {
+                setErrors({ apiError: err.message || 'An error occurred during Google registration.' });
+                // Sign out the user if registration fails
+                await signOut();
+            } finally {
+                setIsGoogleLoading(false);
+            }
         }
-      }
     };
+
     handleGoogleRegistration();
-  }, [session, router, googleRegistrationCompleted]);
+}, [session, status, googleRegistrationAttempted, router]); // Include 'status' and 'router' in dependency array
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-gray-100 font-sans">
