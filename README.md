@@ -125,7 +125,7 @@ Add the following variables:
 
 env
 
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api
+NEXT_PUBLIC_API_BASE_URL=${process.env.NEXT_PUBLIC_API_BASE_URL}
 
 4. Start the Frontend Server
 
@@ -144,7 +144,7 @@ Backend (backend/.env)
 
 Frontend (frontend/.env.local)
 
-    NEXT_PUBLIC_API_BASE_URL: Base URL for the backend API (e.g., http://localhost:5000/api).
+    NEXT_PUBLIC_API_BASE_URL: Base URL for the backend API (e.g., ${process.env.NEXT_PUBLIC_API_BASE_URL}).
 
 Running the Application
 

@@ -214,7 +214,7 @@ export default function SendMessage() {
       const res = await fetch(`${API_BASE_URL}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ encryptedMessage, recipientUsername: username }),
+        body: JSON.stringify({ encryptedMessage,message, recipientUsername: username }),
       });
       
       if (!res.ok) {

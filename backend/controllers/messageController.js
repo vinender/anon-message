@@ -7,7 +7,7 @@ const crypto = require('crypto');
 
 
 exports.sendMessage = async (req, res) => {
-  const { encryptedMessage, recipientUsername } = req.body;
+  const { encryptedMessage,message, recipientUsername } = req.body;
   try {
     // Find recipient
     const recipient = await User.findOne({ username: recipientUsername });
@@ -16,7 +16,7 @@ exports.sendMessage = async (req, res) => {
     }
 
     // Analyze sentiment
-    const isAppropriate = await analyzeMessage(encryptedMessage);
+    const isAppropriate = await analyzeMessage(message);
     console.log('is appropriate', isAppropriate); // Better variable name
 
     // Conditional message saving based on sentiment analysis

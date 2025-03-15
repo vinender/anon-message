@@ -5,7 +5,7 @@ import Navbar from '../navbar';
 import Link from 'next/link';
 import { FcGoogle } from 'react-icons/fc';
 import { useRouter } from 'next/router';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { encryptPrivateKey, generateRSAKeyPair } from '@/utils/crypto';
 import { storePrivateKey } from '@/utils/storage';
 import { motion } from 'framer-motion';
@@ -73,7 +73,7 @@ export default function Signup() {
         await storePrivateKey(encryptedPrivateKeyData);
 
         // Send public key and encrypted private key to the server
-        const res = await fetch('http://localhost:5000/api/auth/signup', {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -102,69 +102,90 @@ export default function Signup() {
     }
   };
 
-  const handleGoogleSignup = async () => {
+   const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
     signIn('google', {
       callbackUrl: '/', // Redirect to homepage after successful Google sign-in *and* registration
     });
   };
-
-
   useEffect(() => {
     const handleGoogleRegistration = async () => {
-        // Only proceed if user is authenticated via Google and registration hasn't been attempted
-        if (status === "authenticated" && !googleRegistrationAttempted) {
-            setGoogleRegistrationAttempted(true); // Set to true immediately to prevent multiple calls
-
-            try {
-                // Generate RSA key pair
-                const { publicKey, privateKey } = await generateRSAKeyPair();
-
-                // Encrypt the private key
-                const encryptedPrivateKeyData = await encryptPrivateKey(
-                    privateKey,
-                    process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
-                );
-
-                // Store the encrypted private key in IndexedDB
-                await storePrivateKey(encryptedPrivateKeyData);
-
-                // Send public key and encrypted private key to the server
-                const res = await fetch('http://localhost:5000/api/auth/google', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        credential: session?.user?.id,  // or some other unique identifier
-                        name: session.user.name,
-                        email: session.user.email,
-                        publicKey,
-                        encryptedPrivateKey: encryptedPrivateKeyData,
-                    }),
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                    localStorage.setItem('token', data.token); // Consider more secure storage
-                    router.push('/'); // Redirect only after successful registration
-                } else {
-                    setErrors({ apiError: data.message || 'Google registration failed.' });
-                     // Sign out the user if registration fails
-                    await signOut();
-
-                }
-            } catch (err) {
-                setErrors({ apiError: err.message || 'An error occurred during Google registration.' });
-                // Sign out the user if registration fails
-                await signOut();
-            } finally {
-                setIsGoogleLoading(false);
+      if (status === "authenticated" && !googleRegistrationAttempted) {
+        setGoogleRegistrationAttempted(true);
+  
+        try {
+          // Check if user exists
+          const checkRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/check-user?email=${encodeURIComponent(session.user.email)}`
+          );
+          const checkData = await checkRes.json();
+  
+          if (checkData.exists) {
+            // Parse the stored private key from backend
+            const parsedPrivateKey = JSON.parse(checkData.encryptedPrivateKey);
+            
+            // Store parsed key in IndexedDB
+            await storePrivateKey(parsedPrivateKey);
+  
+            // Complete authentication with temp token
+            const authRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: session.user.email,
+                encryptedPrivateKey: checkData.token,
+                puublicKey: checkData.publicKey
+              }),
+            });
+  
+            const authData = await authRes.json();
+  
+            if (authRes.ok) {
+              localStorage.setItem('token', authData.token);
+              router.push('/');
+              return;
             }
+          } else {
+            // Generate new keys only for new users
+            const { publicKey, privateKey } = await generateRSAKeyPair();
+            const encryptedPrivateKeyData = await encryptPrivateKey(
+              privateKey,
+              process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
+            );
+  
+            // Store unparsed key in IndexedDB
+            await storePrivateKey(encryptedPrivateKeyData);
+  
+            // Create new user
+            const createRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: session.user.email,
+                name: session.user.name,
+                publicKey,
+                encryptedPrivateKey: encryptedPrivateKeyData
+              }),
+            });
+  
+            const createData = await createRes.json();
+  
+            if (createRes.ok) {
+              localStorage.setItem('token', createData.token);
+              router.push('/');
+            }
+          }
+        } catch (err) {
+          setErrors({ apiError: err.message });
+          await signOut();
+        } finally {
+          setIsGoogleLoading(false);
         }
+      }
     };
-
+  
     handleGoogleRegistration();
-}, [session, status, googleRegistrationAttempted, router]); // Include 'status' and 'router' in dependency array
+  }, [session, status, googleRegistrationAttempted, router]);
 
 
   return (

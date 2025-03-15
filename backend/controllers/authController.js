@@ -128,16 +128,47 @@ exports.login = async (req, res) => {
   }
 };
 
+// New endpoint to check existing user
+exports.checkUser = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.query.email })
+      .select('encryptedPrivateKey publicKey')
+      .lean();
 
+    if (!user) {
+      return res.status(200).json({ exists: false });
+    }
+
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        username: user.username,
+        email: user.email,
+        publicKey: user.publicKey,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.status(200).json({
+      exists: true,
+      encryptedPrivateKey: user.encryptedPrivateKey,
+      publicKey: user.publicKey,
+      token
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error checking user', error: error.message });
+  }
+};
 
 exports.googleAuth = async (req, res) => {
   const { credential, email, name, publicKey, encryptedPrivateKey } = req.body;
   try {
     // Clean the publicKey
-    const cleanedPublicKey = publicKey
-      .replace('-----BEGIN PUBLIC KEY-----', '')
-      .replace('-----END PUBLIC KEY-----', '')
-      .trim();
+    // const cleanedPublicKey = publicKey
+    //   .replace('-----BEGIN PUBLIC KEY-----', '')
+    //   .replace('-----END PUBLIC KEY-----', '')
+    //   .trim();
 
     // Check if user already exists by email
     let user = await User.findOne({ email });
@@ -159,7 +190,7 @@ exports.googleAuth = async (req, res) => {
         username,
         email,
         googleId: credential,
-        publicKey: cleanedPublicKey,
+        publicKey: publicKey,
         encryptedPrivateKey: JSON.stringify(encryptedPrivateKey),
       });
       
