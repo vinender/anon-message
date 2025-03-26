@@ -25,9 +25,9 @@ const transporter = nodemailer.createTransport({
 // Traditional Signup
 
 exports.signup = async (req, res) => {
-  const { username, email, password, publicKey, privateKey } = req.body;
+  const {  email, password, publicKey, privateKey } = req.body;
 
-  if (!username || !email || !password || !publicKey || !privateKey) {
+  if (  !email || !password || !publicKey || !privateKey) {
     return res.status(400).json({ message: 'All fields are required.' });
   }
 

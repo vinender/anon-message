@@ -51,15 +51,16 @@ export default function Navbar() {
             <Link href="/features" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
               Features
             </Link>
+            <Link href="/tech" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
+              Tech
+            </Link>
             <Link href="/faq" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
               FAQ
             </Link>
             
             {user ? (
               <div className="flex items-center space-x-4">
-                <Link href="/dashboard" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
-                  Dashboard
-                </Link>
+                 
                 <div className="h-6 border-r border-slate-700"></div>
                 <div className="relative group">
                   <button className="flex items-center space-x-2 text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
@@ -86,9 +87,9 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="flex items-center space-x-4">
-                <Link href="/login" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
+                {/* <Link href="/login" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
                   Login
-                </Link>
+                </Link> */}
                 <Link 
                   href="/signup" 
                   className="text-sm font-medium bg-gradient-to-r from-indigo-500 to-teal-400 px-5 py-2 rounded-lg hover:shadow-lg hover:shadow-teal-500/20 transition duration-300"

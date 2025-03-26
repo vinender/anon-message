@@ -48,14 +48,14 @@ export default function Home() {
                 </h1>
               </motion.div>
               <nav className="flex items-center space-x-6">
-                <Link href="/signup" className="text-sm font-medium hover:text-teal-400 transition duration-300">
-                  Sign Up
-                </Link>
+                {/* <Link href="/signup" className="text-sm font-medium hover:text-teal-400 transition duration-300">
+                  Lpgin
+                </Link> */}
                 <Link 
-                  href="/login" 
+                  href="/signup" 
                   className="text-sm font-medium bg-gradient-to-r from-indigo-500 to-teal-400 px-5 py-2.5 rounded-lg hover:shadow-lg hover:shadow-teal-500/20 transition duration-300"
                 >
-                  Login
+                  Join
                 </Link>
               </nav>
             </header>

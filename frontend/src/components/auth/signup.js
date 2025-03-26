@@ -14,100 +14,23 @@ import { FaUserPlus, FaEye, FaEyeSlash } from 'react-icons/fa';
 
 
 export default function Signup() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+   
   const [errors, setErrors] = useState({});
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
-  const [googleRegistrationAttempted, setGoogleRegistrationAttempted] = useState(false); // Corrected variable name
+   const [googleRegistrationAttempted, setGoogleRegistrationAttempted] = useState(false); // Corrected variable name
 
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
 
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword);
-  };
-
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    setIsSubmittingForm(true);
-    const validationErrors = {};
-
-    // Validate email
-    if (!email.trim()) {
-      validationErrors.email = 'Email is required.';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      validationErrors.email = 'Invalid email address.';
-    }
-
-    // Validate password
-    if (!password) {
-      validationErrors.password = 'Password is required.';
-    } else if (password.length < 6) {
-      validationErrors.password = 'Password must be at least 6 characters.';
-    } else if (password !== confirmPassword) {
-      validationErrors.confirmPassword = 'Passwords do not match.';
-    }
-
-    setErrors(validationErrors);
-
-    if (Object.keys(validationErrors).length === 0) {
-      try {
-        // Generate RSA key pair
-        const { publicKey, privateKey } = await generateRSAKeyPair();
-
-        // Encrypt the private key using the secret
-        const encryptedPrivateKeyData = await encryptPrivateKey(
-          privateKey,
-          process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
-        );
-
-        // Store the encrypted private key in IndexedDB
-        await storePrivateKey(encryptedPrivateKeyData);
-
-        // Send public key and encrypted private key to the server
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/signup`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            password,
-            publicKey,
-            encryptedPrivateKey: encryptedPrivateKeyData,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          // Redirect to login
-          router.push('/login');
-        } else {
-          setErrors({ apiError: data.message || 'Registration failed.' });
-        }
-      } catch (err) {
-        setErrors({ apiError: err.message || 'An error occurred during registration.' });
-      } finally {
-        setIsSubmittingForm(false);
-      }
-    } else {
-      setIsSubmittingForm(false);
-    }
-  };
-
-   const handleGoogleSignup = async () => {
+  const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
     signIn('google', {
-      callbackUrl: '/', // Redirect to homepage after successful Google sign-in *and* registration
+      callbackUrl: '/signup', // Redirect back to *signup* after initial auth
     });
   };
+
+    
   useEffect(() => {
     const handleGoogleRegistration = async () => {
       if (status === "authenticated" && !googleRegistrationAttempted) {
@@ -224,31 +147,8 @@ export default function Signup() {
                   </motion.div>
                 )}
 
-                <form className="space-y-5" onSubmit={handleSignup}>
-                  {/* Username Field */}
-                  {/* <div>
-                    <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
-                      Username
-                    </label>
-                    <input
-                      id="username"
-                      name="username"
-                      type="text"
-                      autoComplete="username"
-                      required
-                      className={`appearance-none block w-full px-4 py-3 rounded-lg ${
-                        errors.username ? 'border-red-500 bg-red-500/5' : 'border-slate-700 bg-slate-800/50'
-                      } border placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-transparent transition duration-200`}
-                      placeholder="Choose a username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                    />
-                    {errors.username && (
-                      <p className="text-red-400 text-xs mt-1">{errors.username}</p>
-                    )}
-                  </div> */}
-
-                  {/* Email Field */}
+                {/* <form className="space-y-5" onSubmit={handleSignup}>
+                
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
                       Email Address
@@ -271,8 +171,7 @@ export default function Signup() {
                     )}
                   </div>
 
-                  {/* Password Field */}
-                  <div>
+                   <div>
                     <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
                       Password
                     </label>
@@ -303,8 +202,7 @@ export default function Signup() {
                     )}
                   </div>
 
-                  {/* Confirm Password Field */}
-                  <div>
+                   <div>
                     <label htmlFor="confirm-password" className="block text-sm font-medium text-slate-300 mb-2">
                       Confirm Password
                     </label>
@@ -348,14 +246,14 @@ export default function Signup() {
                       )}
                     </button>
                   </div>
-                </form>
+                </form> */}
 
                 {/* Divider */}
-                <div className="flex items-center my-6">
+                {/* <div className="flex items-center my-6">
                   <div className="flex-1 border-t border-slate-700"></div>
                   <div className="px-3 text-sm text-slate-500">OR</div>
                   <div className="flex-1 border-t border-slate-700"></div>
-                </div>
+                </div> */}
 
                 {/* Google Sign-Up Button */}
                 <button
@@ -365,17 +263,17 @@ export default function Signup() {
                   className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-white transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   <FcGoogle className="text-xl" />
-                  <span>{isGoogleLoading ? 'Signing in...' : 'Sign up with Google'}</span>
+                  <span>{isGoogleLoading ? 'Signing in...' : 'Sign in with Google'}</span>
                 </button>
 
-                <div className="mt-6 text-center">
+                {/* <div className="mt-6 text-center">
                   <p className="text-sm text-slate-400">
                     Already have an account?{' '}
                     <Link href="/login" className="font-medium text-teal-400 hover:text-teal-300 transition">
                       Log in
                     </Link>
                   </p>
-                </div>
+                </div> */}
               </div>
             </div>
 

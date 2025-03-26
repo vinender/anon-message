@@ -22,7 +22,7 @@ app.use(cors({
 const authRoutes = require('./routes/authRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const userRoutes = require('./routes/userRoutes');
-
+const characterRoutes = require('./routes/characterRoutes');
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
@@ -33,6 +33,7 @@ const authLimiter = rateLimit({
 app.use('/api/auth', authLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/character', characterRoutes);
 app.use('/api/users', userRoutes); // Add this new line
 
 app.get('/', (req, res) => {
