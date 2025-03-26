@@ -45,15 +45,15 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link href="/about" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
-              About
-            </Link>
-            <Link href="/features" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
-              Features
-            </Link>
             <Link href="/tech" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
-              Tech
+              How it works
             </Link>
+            {/* <Link href="/features" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
+              Features
+            </Link> */}
+            {/* <Link href="/tech" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
+              Tech
+            </Link> */}
             {/* <Link href="/faq" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
               FAQ
             </Link> */}
@@ -138,20 +138,20 @@ export default function Navbar() {
             >
               About
             </Link>
-            <Link 
+            {/* <Link 
               href="/features" 
               onClick={() => setIsOpen(false)}
               className="block text-slate-300 hover:text-teal-400 px-3 py-2 rounded-md text-base font-medium transition"
             >
               Features
-            </Link>
-            <Link 
+            </Link> */}
+            {/* <Link 
               href="/faq" 
               onClick={() => setIsOpen(false)}
               className="block text-slate-300 hover:text-teal-400 px-3 py-2 rounded-md text-base font-medium transition"
             >
               FAQ
-            </Link>
+            </Link> */}
             
             {user ? (
               <>

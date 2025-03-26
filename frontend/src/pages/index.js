@@ -105,15 +105,15 @@ export default function Home() {
                     {`Get Started — It's Free`}
                   </Link>
                   <Link
-                    href="/how-it-works"
-                    className="w-full sm:w-auto px-8 py-3.5 rounded-lg text-sm font-medium border border-slate-700 hover:border-teal-400/30 transition duration-300"
+                    href="/tech"
+                    className="w-full cursor-pointer sm:w-auto px-8 py-3.5 rounded-lg text-sm font-medium border border-slate-700 hover:border-teal-400/30 transition duration-300"
                   >
                     How It Works
                   </Link>
                 </motion.div>
               </div>
               
-              <div className="mt-20 py-10 px-6 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800">
+              {/* <div className="mt-20 py-10 px-6 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800">
                 <p className="text-sm font-medium text-slate-400 mb-4">TRUSTED BY THOUSANDS WORLDWIDE</p>
                 <div className="flex flex-wrap justify-center gap-8 md:gap-16">
                   {['20,000+', '99.9%', '256-bit', '100%'].map((stat, i) => (
@@ -128,7 +128,7 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </div> */}
             </main>
 
             {/* How It Works Section */}

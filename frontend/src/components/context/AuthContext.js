@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
 
   // Update logout function to use NextAuth's signOut
   const logout = () => {
-    signOut({ callbackUrl: '/login' });
+    signOut({ callbackUrl: '/signup' });
   };
 
   return (
