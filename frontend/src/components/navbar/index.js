@@ -54,9 +54,9 @@ export default function Navbar() {
             <Link href="/tech" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
               Tech
             </Link>
-            <Link href="/faq" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
+            {/* <Link href="/faq" className="text-sm font-medium text-slate-300 hover:text-teal-400 transition duration-300">
               FAQ
-            </Link>
+            </Link> */}
             
             {user ? (
               <div className="flex items-center space-x-4">
@@ -69,12 +69,12 @@ export default function Navbar() {
                   </button>
                   <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform origin-top-right">
                     <div className="py-1">
-                      <Link href="/profile" className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-teal-400">
+                      {/* <Link href="/profile" className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-teal-400">
                         Profile
                       </Link>
                       <Link href="/settings" className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-teal-400">
                         Settings
-                      </Link>
+                      </Link> */}
                       <button
                         onClick={logout}
                         className="w-full text-left block px-4 py-2 text-sm text-red-400 hover:bg-slate-800"
@@ -162,7 +162,7 @@ export default function Navbar() {
                 >
                   Dashboard
                 </Link>
-                <Link 
+                {/* <Link 
                   href="/profile" 
                   onClick={() => setIsOpen(false)}
                   className="block text-slate-300 hover:text-teal-400 px-3 py-2 rounded-md text-base font-medium transition"
@@ -175,7 +175,7 @@ export default function Navbar() {
                   className="block text-slate-300 hover:text-teal-400 px-3 py-2 rounded-md text-base font-medium transition"
                 >
                   Settings
-                </Link>
+                </Link> */}
                 <div className="border-t border-slate-800 my-2"></div>
                 <button
                   onClick={() => {
