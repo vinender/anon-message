@@ -164,11 +164,7 @@ exports.checkUser = async (req, res) => {
 exports.googleAuth = async (req, res) => {
   const { credential, email, name, publicKey, encryptedPrivateKey } = req.body;
   try {
-    // Clean the publicKey
-    // const cleanedPublicKey = publicKey
-    //   .replace('-----BEGIN PUBLIC KEY-----', '')
-    //   .replace('-----END PUBLIC KEY-----', '')
-    //   .trim();
+    
 
     // Check if user already exists by email
     let user = await User.findOne({ email });

@@ -195,7 +195,7 @@ const AnonMessageSecurity = () => {
                             animate="show"
                             style={{ animationDelay: '0.4s' }}
                         >
-                            Understanding the advanced technology behind AnonMessage's military-grade security and AI-powered content filtering.
+                            {`Understanding the advanced technology behind AnonMessage's military-grade security and AI-powered content filtering.`}
                         </motion.p>
                     </div>
                 </main>
@@ -349,7 +349,7 @@ const AnonMessageSecurity = () => {
                                 <FontAwesomeIcon icon={faTrashAlt} className="text-white text-xl" />
                             </div>
                             <h4 className="text-xl font-semibold mb-3">Zero Storage Policy</h4>
-                            <p className="text-slate-400 mb-4">We don't store your messages or connection data. Once delivered, messages are permanently deleted from our servers.</p>
+                            <p className="text-slate-400 mb-4">{`We don't store your messages or connection data. Once delivered, messages are permanently deleted from our servers.`}</p>
                             <div className="flex flex-wrap gap-2 mt-4">
                                 <span className="tech-pill text-xs px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 transition duration-300" style={styles.techPillHover}>Ephemeral Storage</span>
                                 <span className="tech-pill text-xs px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-400 transition duration-300" style={styles.techPillHover}>Auto-Delete</span>
@@ -410,7 +410,7 @@ const AnonMessageSecurity = () => {
                                     <p><span className="text-indigo-400 font-medium">Message Composition:</span> Text is composed in the app.</p>
                                 </li>
                                 <li>
-                                    <p><span className="text-indigo-400 font-medium">Client-side Encryption:</span> The message is encrypted with the recipient's public key.</p>
+                                    <p><span className="text-indigo-400 font-medium">Client-side Encryption:</span>{` The message is encrypted with the recipient's public key.`}</p>
                                 </li>
                                 <li>
                                     <p><span className="text-indigo-400 font-medium">AI Content Filtering:</span> The encrypted message is analyzed for harmful patterns.</p>
@@ -512,12 +512,12 @@ const AnonMessageSecurity = () => {
 
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 transition duration-300">
                                 <h4 className="text-lg font-medium mb-2">Can AnonMessage read my messages?</h4>
-                                <p className="text-slate-400">No. With end-to-end encryption, only you and your recipient can read the messages.  We don't have access to the decryption keys, which means we technically *cannot* read your messages even if we wanted to.</p>
+                                <p className="text-slate-400">{`No. With end-to-end encryption, only you and your recipient can read the messages.  We don't have access to the decryption keys, which means we technically *cannot* read your messages even if we wanted to.`}</p>
                             </div>
 
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 transition duration-300">
                                 <h4 className="text-lg font-medium mb-2">What happens if I lose my device?</h4>
-                                <p className="text-slate-400">For enhanced security, encryption keys are stored *only* on your device. If you lose your device, you'll need to create a new account.  This ensures that no one can access your previous messages, even if they gain access to your account.</p>
+                                <p className="text-slate-400">{`For enhanced security, encryption keys are stored *only* on your device. If you lose your device, you'll need to create a new account.  This ensures that no one can access your previous messages, even if they gain access to your account.`}</p>
                             </div>
 
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 transition duration-300">
