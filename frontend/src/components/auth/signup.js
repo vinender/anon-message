@@ -10,6 +10,7 @@ import { encryptPrivateKey, generateRSAKeyPair } from '@/utils/crypto';
 import { storePrivateKey } from '@/utils/storage';
 import { motion } from 'framer-motion';
 import { FaUserPlus, FaEye, FaEyeSlash } from 'react-icons/fa';
+import axiosInstance from '@/utils/axios/axiosInstance';
 
 
 function Loader() {
@@ -24,94 +25,71 @@ function Loader() {
 
 
 export default function Signup() {
-   
   const [errors, setErrors] = useState({});
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false); // For the button click itself
-  const [isProcessingSignup, setIsProcessingSignup] = useState(false); // For backend processing post-redirect
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isProcessingSignup, setIsProcessingSignup] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
   const [googleRegistrationAttempted, setGoogleRegistrationAttempted] = useState(false);
 
-
   const handleGoogleSignup = async () => {
-    setIsGoogleLoading(true); // Indicate button interaction started
-    // No need to set isProcessingSignup here, as the page will reload
-    signIn('google', {
-      callbackUrl: '/signup', // Redirect back here after Google auth
-      // We could add a query param here if needed, but let's rely on status + state for now
-    });
-    // Note: Execution stops here due to redirect
+    setIsGoogleLoading(true);
+    signIn('google', { callbackUrl: '/signup' });
   };
 
-    
-  // --- Effect to Handle Post-Google Authentication & Backend Processing ---
   useEffect(() => {
     const handleGoogleRegistration = async () => {
-      // Only run if authenticated via callback AND registration hasn't been attempted yet in this session
       if (status === "authenticated" && !googleRegistrationAttempted) {
-        setGoogleRegistrationAttempted(true); // Mark attempt
-        setIsProcessingSignup(true); // START showing the full loader
+        setGoogleRegistrationAttempted(true);
+        setIsProcessingSignup(true);
+        setErrors({}); // Clear previous errors
 
         try {
-          // Check if user exists in your backend
-          const checkRes = await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/check-user?email=${encodeURIComponent(session.user.email)}`
-          );
-
-          if (!checkRes.ok) {
-            // Handle non-JSON or server error during check
-             const errorText = await checkRes.text();
-             throw new Error(`User check failed: ${checkRes.status} ${errorText || checkRes.statusText}`);
-          }
-
-          const checkData = await checkRes.json();
+          // --- Check if user exists using Axios ---
+          console.log(`Checking user: ${session.user.email}`);
+          const checkRes = await axiosInstance.get('/auth/check-user', {
+            params: { email: session.user.email } // Pass email as query param
+          });
+          const checkData = checkRes.data; // Axios provides data directly
+          console.log("User check response:", checkData);
 
           if (checkData.exists) {
             // --- Existing User Logic ---
             console.log("Existing user found via Google Auth.");
-            // We need the encrypted key and public key from the check endpoint
             if (!checkData.encryptedPrivateKey || !checkData.publicKey) {
                 throw new Error("Existing user data missing required keys from backend.");
             }
 
-            // Parse the stored private key *if it's stored as a stringified JSON*
-            // Adjust this based on how your backend sends the key
-             let parsedPrivateKey;
+            let parsedPrivateKey;
              try {
-                 // Assuming backend sends it as a stringified JSON object like { iv: '...', key: '...' }
                  parsedPrivateKey = typeof checkData.encryptedPrivateKey === 'string'
                      ? JSON.parse(checkData.encryptedPrivateKey)
-                     : checkData.encryptedPrivateKey; // Or use directly if it's already an object
+                     : checkData.encryptedPrivateKey;
              } catch (e) {
                  console.error("Failed to parse encrypted private key:", e);
                  throw new Error("Invalid format for encrypted private key received from backend.");
              }
 
-            await storePrivateKey(parsedPrivateKey); // Store in IndexedDB
+            await storePrivateKey(parsedPrivateKey);
 
-            // Backend wants email, and potentially a way to verify the Google login just happened.
-            // Let's assume the backend uses the email from the authenticated session.
-            // Your original code sent the *parsed* key back, which seems wrong.
-            // Let's send the email and expect the backend to generate a session token.
-            // *Revised Backend Call for existing user:* Adapt this based on your actual API endpoint needs.
-            // It might just need the email or might use the Google ID token implicitly via next-auth.
-            const authRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`, { // Assuming a dedicated login endpoint
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                email: session.user.email,
-                // Potentially send google ID token if backend verifies it: session.accessToken
-              }),
+            // --- Authenticate existing user using Axios ---
+            // * Verify backend endpoint: Is it /auth/google or /auth/google-login? *
+            // Using /auth/google as per original code for now.
+            console.log("Authenticating existing Google user:", session.user.email);
+            const authRes = await axiosInstance.post('/auth/google', {
+              email: session.user.email,
+              // Send other necessary fields if your backend requires them for login
             });
+            const authData = authRes.data;
+            console.log("Authentication response:", authData);
 
-             if (!authRes.ok) {
-                const errorData = await authRes.json().catch(() => ({ message: `Authentication failed: ${authRes.statusText}` }));
-                throw new Error(errorData.message || `Authentication failed: ${authRes.status}`);
+
+            if (!authData.token) {
+                throw new Error("Authentication successful but no token received.");
             }
-            const authData = await authRes.json();
 
-            localStorage.setItem('token', authData.token); // Store your app's token
-            router.push('/'); // Redirect to dashboard
+            localStorage.setItem('token', authData.token);
+            router.push('/');
 
           } else {
             // --- New User Logic ---
@@ -122,57 +100,49 @@ export default function Signup() {
               process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
             );
 
-            // Store the *encrypted* key data in IndexedDB immediately
             await storePrivateKey(encryptedPrivateKeyData);
 
-            // Create new user in your backend
-            const createRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+            // --- Create new user using Axios ---
+            console.log("Creating new Google user:", session.user.email);
+            const createRes = await axiosInstance.post('/auth/google', {
                 email: session.user.email,
                 name: session.user.name,
-                publicKey, // Send the generated public key
-                encryptedPrivateKey: encryptedPrivateKeyData // Send the encrypted private key data
-              }),
+                publicKey,
+                encryptedPrivateKey: encryptedPrivateKeyData
             });
+            const createData = createRes.data;
+            console.log("Creation response:", createData);
 
-             if (!createRes.ok) {
-                const errorData = await createRes.json().catch(() => ({ message: `User creation failed: ${createRes.statusText}` }));
-                throw new Error(errorData.message || `User creation failed: ${createRes.status}`);
+
+             if (!createData.token) {
+                throw new Error("User creation successful but no token received.");
             }
-            const createData = await createRes.json();
 
-            localStorage.setItem('token', createData.token); // Store your app's token
-            router.push('/'); // Redirect to dashboard
+            localStorage.setItem('token', createData.token);
+            router.push('/');
           }
 
         } catch (err) {
           console.error("Google Registration/Login Error:", err);
-          setErrors({ apiError: `Google Sign-Up failed: ${err.message}` });
-          // Sign out from next-auth session if backend process fails
-          await signOut({ redirect: false }); // Sign out without redirecting
-          setGoogleRegistrationAttempted(false); // Allow retry if needed after fixing the issue
+          // Axios errors often have more info in err.response.data or err.message
+          const errorMessage = err.response?.data?.message || err.message || 'An unexpected error occurred during Google Sign-Up.';
+          setErrors({ apiError: `Google Sign-Up failed: ${errorMessage}` });
+          await signOut({ redirect: false });
+          setGoogleRegistrationAttempted(false);
         } finally {
-          setIsProcessingSignup(false); // STOP showing the full loader
-          // Reset button state in case user stays on page (though usually they redirect or see error)
+          setIsProcessingSignup(false);
           setIsGoogleLoading(false);
         }
-      } else if (status === 'loading') {
-          // Optional: You could potentially set isProcessingSignup(true) here too
-          // if you want the loader even during the initial next-auth session check.
-          // console.log("NextAuth session status: loading");
-      } else {
-          // Handle cases where user is unauthenticated or already processed
-          // console.log("NextAuth status:", status, "Google Registration Attempted:", googleRegistrationAttempted);
+      } else if (status === 'unauthenticated' && googleRegistrationAttempted) {
+          // If we attempted registration but ended up unauthenticated (e.g., signOut was called in catch)
+          // Reset the attempt flag so user can try again if they wish
+          setGoogleRegistrationAttempted(false);
       }
     };
 
     handleGoogleRegistration();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, status, router]); // Removed googleRegistrationAttempted from deps to avoid loops if signOut fails
+  }, [session, status, router, googleRegistrationAttempted]); // Added googleRegistrationAttempted back, carefully manage state updates
 
-  // --- Render Logic ---
   return (
     <div className="min-h-screen bg-slate-950 text-gray-100 font-sans">
       <Navbar />
