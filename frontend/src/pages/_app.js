@@ -11,8 +11,14 @@ import "../styles/globals.css";
 const TOKEN_KEY = 'token'; // Your localStorage key for your app's token
 const LOGIN_PATH = '/signup'; // Redirect path when logged out
 // Public paths accessible without the app token
-const PUBLIC_PATHS = [LOGIN_PATH, '/terms', '/privacy', '/signup']; // Added /login just in case
-
+const PUBLIC_PATHS = [
+  '/',          // Allow access to the root landing page
+  '/tech',      // Allow access to the /tech route
+  LOGIN_PATH,   // Allow access to the signup page
+  '/login',     // Allow access to a potential login page
+  '/terms',     // Allow access to terms
+  '/privacy'    // Allow access to privacy policy
+];
 // --- AuthGuard Component ---
 function AuthGuard({ children }) {
   const router = useRouter();
