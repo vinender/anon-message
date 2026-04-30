@@ -4,7 +4,7 @@ import { AuthContext } from '../components/context/AuthContext';
 import Dashboard from '@/components/dashboard';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { FaLock, FaUserSecret, FaUsers, FaShieldAlt, FaEyeSlash } from 'react-icons/fa';
+import { FaLock, FaUserSecret, FaUsers, FaShieldAlt, FaEyeSlash, FaKey } from 'react-icons/fa';
 import { HiOutlineSparkles } from 'react-icons/hi';
 
 
@@ -241,6 +241,8 @@ export default function Home() {
             <section className="py-32 relative overflow-hidden mt-20 rounded-[3rem] bg-zinc-950 border border-zinc-800/50 mb-12 mx-4 sm:mx-8 xl:mx-auto max-w-6xl shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-zinc-950 to-zinc-500/10 z-0 pointer-events-none"></div>
               
+
+
               <div className="relative z-10 text-center max-w-3xl mx-auto px-4">
                 <h3 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-400">
                   Ready to go dark?
@@ -367,23 +369,33 @@ const EncryptionVisualizer = () => {
           <span className="h-6 w-6 rounded-full bg-zinc-500/20 flex items-center justify-center">2</span> 
           We Store
         </h4>
-        <div className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-4 font-mono text-xs text-zinc-400/70 overflow-hidden break-all h-[58px] flex items-center">
-          {generateHash(text)}
+        <div className="relative">
+          <div className="absolute -top-3 right-2 bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 z-10">
+             NO KEY
+          </div>
+          <div className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-4 font-mono text-xs text-zinc-400/70 overflow-hidden break-all h-[58px] flex items-center">
+            {generateHash(text)}
+          </div>
         </div>
       </div>
 
       <div className="flex-shrink-0 flex md:flex-col items-center">
         <div className="h-1 w-8 md:w-1 md:h-16 bg-gradient-to-r md:bg-gradient-to-b from-zinc-500 to-emerald-400 rounded md:mb-2 mr-2 md:mr-0"></div>
-        <FaEyeSlash className="text-2xl text-emerald-400" />
+        <FaKey className="text-2xl text-emerald-400" />
       </div>
 
       <div className="w-full md:w-1/3 space-y-4">
         <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
           <span className="h-6 w-6 rounded-full bg-emerald-400/20 flex items-center justify-center">3</span> 
-          They Read
+          Client Decrypts
         </h4>
-        <div className="w-full bg-emerald-400/10 border border-emerald-400/30 rounded-lg p-4 text-emerald-100 h-[58px] flex items-center shadow-[0_0_15px_rgba(45,212,191,0.2)]">
-          {text || '...'}
+        <div className="relative">
+          <div className="absolute -top-3 right-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 z-10 backdrop-blur-sm">
+            <FaKey /> PRIVATE KEY
+          </div>
+          <div className="w-full bg-emerald-400/10 border border-emerald-400/30 rounded-lg p-4 text-emerald-100 h-[58px] flex items-center shadow-[0_0_15px_rgba(45,212,191,0.2)]">
+            {text || '...'}
+          </div>
         </div>
       </div>
     </div>
