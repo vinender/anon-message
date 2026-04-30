@@ -15,10 +15,10 @@ const WeighingScale = ({ positiveMessages, negativeMessages }) => {
     <div className="flex flex-col items-center">
       <div className="relative w-80 h-80">
         {/* Scale Base */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-24 h-4 bg-gray-800 rounded-t-md"></div>
+        <div className="absolute bottom-0 left-1/2 transform -tranzinc-x-1/2 w-24 h-4 bg-gray-800 rounded-t-md"></div>
 
         {/* Scale Pillar */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
+        <div className="absolute bottom-4 left-1/2 transform -tranzinc-x-1/2 flex flex-col items-center">
           {/* Scale Beam */}
           <div
             className="relative w-72 h-2 bg-gray-600 transition-transform duration-700 ease-in-out"

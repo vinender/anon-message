@@ -47,7 +47,7 @@ const ShareButtons = ({ shareUrl, userName }) => {
       {hasNativeShare && (
          <button
             onClick={handleNativeShare}
-            className="w-full mb-4 flex items-center justify-center gap-2 py-2 px-4 bg-teal-500 hover:bg-teal-600 rounded-lg text-white transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-teal-500"
+            className="w-full mb-4 flex items-center justify-center gap-2 py-2 px-4 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-white transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:ring-emerald-500"
           >
             <FiShare2 className="h-5 w-5" />
             <span>Share Link</span>
@@ -56,7 +56,7 @@ const ShareButtons = ({ shareUrl, userName }) => {
 
       {/* Fallback Links / Always Visible Links */}
       <div className="flex justify-between items-center">
-         <span className="text-sm text-slate-300">
+         <span className="text-sm text-zinc-300">
              {hasNativeShare ? 'Or share via:' : 'Share on social media:'}
          </span>
         <div className="flex space-x-2">
@@ -66,7 +66,7 @@ const ShareButtons = ({ shareUrl, userName }) => {
             target="_blank"
             rel="noopener noreferrer"
             title="Share on Twitter"
-            className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition text-[#1DA1F2]"
+            className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition text-[#1DA1F2]"
           >
             <FaTwitter className="h-4 w-4" />
           </a>
@@ -76,7 +76,7 @@ const ShareButtons = ({ shareUrl, userName }) => {
             target="_blank"
             rel="noopener noreferrer"
             title="Share on Facebook"
-            className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition text-[#4267B2]" // Use actual FB blue
+            className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition text-[#4267B2]" // Use actual FB blue
           >
             <FaFacebookF className="h-4 w-4" />
           </a>
@@ -86,7 +86,7 @@ const ShareButtons = ({ shareUrl, userName }) => {
             target="_blank"
             rel="noopener noreferrer"
             title="Share on LinkedIn"
-            className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition text-[#0A66C2]" // Use actual LinkedIn blue
+            className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition text-[#0A66C2]" // Use actual LinkedIn blue
           >
             <FaLinkedinIn className="h-4 w-4" />
           </a>
@@ -96,7 +96,7 @@ const ShareButtons = ({ shareUrl, userName }) => {
             target="_blank"
             rel="noopener noreferrer"
             title="Share on WhatsApp"
-            className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 transition text-[#25D366]" // Use actual WhatsApp green
+            className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 transition text-[#25D366]" // Use actual WhatsApp green
           >
             <FaWhatsapp className="h-4 w-4" />
           </a>

@@ -234,7 +234,7 @@ export default function SendMessage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-gray-100 font-sans">
+    <div className="min-h-screen bg-zinc-950 text-gray-100 font-sans">
       <Navbar />
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-8">
         <motion.div 
@@ -244,21 +244,21 @@ export default function SendMessage() {
           className="max-w-2xl w-full space-y-8"
         >
           <div className="text-center">
-            <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-teal-400 flex items-center justify-center mb-6">
+            <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-zinc-500 to-emerald-400 flex items-center justify-center mb-6">
               <FaLock className="text-white text-xl" />
             </div>
             <h2 className="text-3xl font-bold text-white">
               Send Anonymous Message
             </h2>
-            <p className="mt-3 text-slate-400">
+            <p className="mt-3 text-zinc-400">
               {username ? `To: ${username}` : 'Loading recipient...'}
             </p>
           </div>
 
           <div className="mt-10">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-teal-400/10 rounded-xl blur-xl"></div>
-              <div className="relative bg-slate-900/80 backdrop-blur-sm p-8 rounded-xl border border-slate-800">
+              <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/10 to-emerald-400/10 rounded-xl blur-xl"></div>
+              <div className="relative bg-zinc-900/80 backdrop-blur-sm p-8 rounded-xl border border-zinc-800">
                 {status && (
                   <motion.div 
                     initial={{ opacity: 0, y: -10 }}
@@ -276,7 +276,7 @@ export default function SendMessage() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <label className="block text-sm font-medium text-zinc-300 mb-2">
                         Select Department
                       </label>
                       <div className="flex flex-wrap gap-2">
@@ -287,8 +287,8 @@ export default function SendMessage() {
                             onClick={() => setActiveDepartment(department)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                               activeDepartment === department
-                                ? 'bg-gradient-to-r from-indigo-500 to-teal-400 text-white shadow-lg shadow-teal-500/20'
-                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                ? 'bg-gradient-to-r from-zinc-500 to-emerald-400 text-white shadow-lg shadow-emerald-500/20'
+                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                             }`}
                           >
                             {department}
@@ -298,7 +298,7 @@ export default function SendMessage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <label className="block text-sm font-medium text-zinc-300 mb-2">
                         Select Category
                       </label>
                       <div className="flex flex-wrap gap-2">
@@ -309,8 +309,8 @@ export default function SendMessage() {
                             onClick={() => setActiveCategory(category)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                               activeCategory === category
-                                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20'
-                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                             }`}
                           >
                             {category}
@@ -320,10 +320,10 @@ export default function SendMessage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <label className="block text-sm font-medium text-zinc-300 mb-2">
                         Sample Messages
                       </label>
-                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800">
+                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-800">
                         {messages[activeDepartment][activeCategory].map((msg, index) => (
                           <button
                             type="button"
@@ -331,8 +331,8 @@ export default function SendMessage() {
                             onClick={() => handleSampleMessageClick(msg)}
                             className={`text-left text-xs p-3 rounded-lg transition-all duration-200 ${
                               selectedMessage === msg
-                                ? 'bg-indigo-500/20 border border-indigo-500/30 text-indigo-200'
-                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                ? 'bg-zinc-500/20 border border-zinc-500/30 text-zinc-200'
+                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                             }`}
                           >
                             {msg}
@@ -342,7 +342,7 @@ export default function SendMessage() {
                     </div>
 
                     <div>
-                      <label htmlFor="message" className="block text-sm font-medium text-slate-300 mb-2">
+                      <label htmlFor="message" className="block text-sm font-medium text-zinc-300 mb-2">
                         Your Message
                       </label>
                       <div className="relative">
@@ -350,7 +350,7 @@ export default function SendMessage() {
                           id="message"
                           name="message"
                           rows="4"
-                          className="appearance-none block w-full px-4 py-3 rounded-lg border-slate-700 bg-slate-800/50 border placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-transparent transition duration-200"
+                          className="appearance-none block w-full px-4 py-3 rounded-lg border-zinc-700 bg-zinc-800/50 border placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition duration-200"
                           placeholder="Write your anonymous message..."
                           value={message}
                           onChange={(e) => setMessage(e.target.value)}
@@ -360,7 +360,7 @@ export default function SendMessage() {
                           <button 
                             type="button" 
                             onClick={handleRemoveMessage}
-                            className="absolute top-2 right-2 text-slate-400 hover:text-red-400 transition-colors"
+                            className="absolute top-2 right-2 text-zinc-400 hover:text-red-400 transition-colors"
                           >
                             <FaTimesCircle />
                           </button>
@@ -373,7 +373,7 @@ export default function SendMessage() {
                     <button
                       type="submit"
                       disabled={isLoading || !message.trim()}
-                      className="group relative w-full flex justify-center py-3 px-4 bg-gradient-to-r from-indigo-500 to-teal-400 text-sm font-medium rounded-lg text-white shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-70"
+                      className="group relative w-full flex justify-center py-3 px-4 bg-gradient-to-r from-zinc-500 to-emerald-400 text-sm font-medium rounded-lg text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-70"
                     >
                       {isLoading ? (
                         <span className="animate-pulse">Sending message...</span>
@@ -390,9 +390,9 @@ export default function SendMessage() {
             </div>
             
             <div className="mt-8 text-center">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-zinc-500">
                 By sending this message, you agree that the content follows our{' '}
-                <a href="/guidelines" className="text-teal-400 hover:text-teal-300">
+                <a href="/guidelines" className="text-emerald-400 hover:text-emerald-300">
                   Community Guidelines
                 </a>
               </p>

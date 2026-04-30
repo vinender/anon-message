@@ -2,13 +2,15 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const dbConnect = require('./utils/dbConnect');
 const rateLimit = require('express-rate-limit');
+
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
+// Initialize Supabase connection
+const dbConnect = require('./utils/dbConnect');
 dbConnect();
+
 
 const app = express();
 

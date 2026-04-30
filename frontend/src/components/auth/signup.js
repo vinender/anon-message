@@ -15,10 +15,10 @@ import axiosInstance from '@/utils/axios/axiosInstance';
 
 function Loader() {
   return (
-    <div className="fixed inset-0 bg-slate-950 bg-opacity-80 flex flex-col items-center justify-center z-50">
-      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-teal-400 mb-4"></div>
+    <div className="fixed inset-0 bg-zinc-950 bg-opacity-80 flex flex-col items-center justify-center z-50">
+      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-emerald-400 mb-4"></div>
       <p className="text-white text-lg font-semibold">Processing Google Sign-Up...</p>
-      <p className="text-slate-400 text-sm">Please wait a moment.</p>
+      <p className="text-zinc-400 text-sm">Please wait a moment.</p>
     </div>
   );
 }
@@ -144,7 +144,7 @@ export default function Signup() {
   }, [session, status, router, googleRegistrationAttempted]); // Added googleRegistrationAttempted back, carefully manage state updates
 
   return (
-    <div className="min-h-screen bg-slate-950 text-gray-100 font-sans">
+    <div className="min-h-screen bg-zinc-950 text-gray-100 font-sans">
       <Navbar />
 
       {/* Conditionally render loader based on processing state */}
@@ -161,13 +161,13 @@ export default function Signup() {
           >
             {/* ... (Header: Icon, Title, Subtitle) ... */}
              <div className="text-center">
-                <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-teal-400 flex items-center justify-center mb-6">
+                <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-zinc-500 to-emerald-400 flex items-center justify-center mb-6">
                 <FaUserPlus className="text-white text-xl" />
                 </div>
                 <h2 className="text-3xl font-bold text-white">
                 Create Your Account
                 </h2>
-                <p className="mt-3 text-slate-400">
+                <p className="mt-3 text-zinc-400">
                 Join to start receiving anonymous messages
                 </p>
             </div>
@@ -175,8 +175,8 @@ export default function Signup() {
 
             <div className="mt-10">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-teal-400/10 rounded-xl blur-xl"></div>
-                <div className="relative bg-slate-900/80 backdrop-blur-sm p-8 rounded-xl border border-slate-800">
+                <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/10 to-emerald-400/10 rounded-xl blur-xl"></div>
+                <div className="relative bg-zinc-900/80 backdrop-blur-sm p-8 rounded-xl border border-zinc-800">
                   {errors.apiError && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
@@ -197,7 +197,7 @@ export default function Signup() {
                     onClick={handleGoogleSignup}
                     // Disable button if google sign-in initiated OR if backend processing is happening
                     disabled={isGoogleLoading || isProcessingSignup}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-white transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-white transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <FcGoogle className="text-xl" />
                     {/* Text changes based on which loading state is active */}
@@ -212,9 +212,9 @@ export default function Signup() {
 
                    {/* Optional: Link to Login */}
                    {/* <div className="mt-6 text-center">
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-zinc-400">
                         Already have an account?{' '}
-                        <Link href="/login" className="font-medium text-teal-400 hover:text-teal-300 transition">
+                        <Link href="/login" className="font-medium text-emerald-400 hover:text-emerald-300 transition">
                         Log in
                         </Link>
                     </p>
@@ -224,13 +224,13 @@ export default function Signup() {
 
                {/* Footer Links */}
                <div className="mt-8 text-center">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-zinc-500">
                     By creating an account, you agree to our{' '}
-                    <Link href="/terms" className="text-teal-400 hover:text-teal-300">
+                    <Link href="/terms" className="text-emerald-400 hover:text-emerald-300">
                     Terms of Service
                     </Link>{' '}
                     and{' '}
-                    <Link href="/privacy" className="text-teal-400 hover:text-teal-300">
+                    <Link href="/privacy" className="text-emerald-400 hover:text-emerald-300">
                     Privacy Policy
                     </Link>
                 </p>

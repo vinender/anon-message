@@ -69,7 +69,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-gray-100 font-sans">
+    <div className="min-h-screen bg-zinc-950 text-gray-100 font-sans">
       <Navbar />
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4">
         <motion.div 
@@ -79,21 +79,21 @@ export default function Login() {
           className="max-w-md w-full space-y-8"
         >
           <div className="text-center">
-            <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-teal-400 flex items-center justify-center mb-6">
+            <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-zinc-500 to-emerald-400 flex items-center justify-center mb-6">
               <FaLock className="text-white text-xl" />
             </div>
             <h2 className="text-3xl font-bold text-white">
               Welcome Back
             </h2>
-            <p className="mt-3 text-slate-400">
+            <p className="mt-3 text-zinc-400">
               Log in to access your anonymous messages
             </p>
           </div>
 
           <div className="mt-10">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-teal-400/10 rounded-xl blur-xl"></div>
-              <div className="relative bg-slate-900/80 backdrop-blur-sm p-8 rounded-xl border border-slate-800">
+              <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/10 to-emerald-400/10 rounded-xl blur-xl"></div>
+              <div className="relative bg-zinc-900/80 backdrop-blur-sm p-8 rounded-xl border border-zinc-800">
                 {errors.apiError && (
                   <motion.div 
                     initial={{ opacity: 0, y: -10 }}
@@ -106,7 +106,7 @@ export default function Login() {
                 
                 <form className="space-y-6" onSubmit={handleLogin}>
                   <div>
-                    <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
+                    <label htmlFor="username" className="block text-sm font-medium text-zinc-300 mb-2">
                       Username
                     </label>
                     <input
@@ -116,8 +116,8 @@ export default function Login() {
                       autoComplete="username"
                       required
                       className={`appearance-none block w-full px-4 py-3 rounded-lg ${
-                        errors.username ? 'border-red-500 bg-red-500/5' : 'border-slate-700 bg-slate-800/50'
-                      } border placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-transparent transition duration-200`}
+                        errors.username ? 'border-red-500 bg-red-500/5' : 'border-zinc-700 bg-zinc-800/50'
+                      } border placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition duration-200`}
                       placeholder="Enter your username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
@@ -128,7 +128,7 @@ export default function Login() {
                   </div>
                   
                   <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+                    <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-2">
                       Password
                     </label>
                     <div className="relative">
@@ -139,8 +139,8 @@ export default function Login() {
                         autoComplete="current-password"
                         required
                         className={`appearance-none block w-full px-4 py-3 rounded-lg ${
-                          errors.password ? 'border-red-500 bg-red-500/5' : 'border-slate-700 bg-slate-800/50'
-                        } border placeholder-slate-500 text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-transparent transition duration-200`}
+                          errors.password ? 'border-red-500 bg-red-500/5' : 'border-zinc-700 bg-zinc-800/50'
+                        } border placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition duration-200`}
                         placeholder="Enter your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -148,7 +148,7 @@ export default function Login() {
                       <button 
                         type="button" 
                         onClick={togglePasswordVisibility}
-                        className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-teal-400 transition"
+                        className="absolute inset-y-0 right-0 flex items-center px-3 text-zinc-400 hover:text-emerald-400 transition"
                       >
                         {showPassword ? <FaEyeSlash /> : <FaEye />}
                       </button>
@@ -158,7 +158,7 @@ export default function Login() {
                     )}
                     
                     <div className="flex justify-end mt-2">
-                      <Link href="/forgot-password" className="text-xs font-medium text-teal-400 hover:text-teal-300 transition">
+                      <Link href="/forgot-password" className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition">
                         Forgot password?
                       </Link>
                     </div>
@@ -168,7 +168,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="group relative w-full flex justify-center py-3 px-4 bg-gradient-to-r from-indigo-500 to-teal-400 text-sm font-medium rounded-lg text-white shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-70"
+                      className="group relative w-full flex justify-center py-3 px-4 bg-gradient-to-r from-zinc-500 to-emerald-400 text-sm font-medium rounded-lg text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-70"
                     >
                       {isLoading ? (
                         <span className="animate-pulse">Logging in...</span>
@@ -180,9 +180,9 @@ export default function Login() {
                 </form>
                 
                 <div className="mt-6 text-center">
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-zinc-400">
                     {`Don't have an account?`}{' '}
-                    <Link href="/signup" className="font-medium text-teal-400 hover:text-teal-300 transition">
+                    <Link href="/signup" className="font-medium text-emerald-400 hover:text-emerald-300 transition">
                       Create an account
                     </Link>
                   </p>
@@ -191,13 +191,13 @@ export default function Login() {
             </div>
             
             <div className="mt-8 text-center">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-zinc-500">
                 By logging in, you agree to our{' '}
-                <Link href="/terms" className="text-teal-400 hover:text-teal-300">
+                <Link href="/terms" className="text-emerald-400 hover:text-emerald-300">
                   Terms of Service
                 </Link>{' '}
                 and{' '}
-                <Link href="/privacy" className="text-teal-400 hover:text-teal-300">
+                <Link href="/privacy" className="text-emerald-400 hover:text-emerald-300">
                   Privacy Policy
                 </Link>
               </p>

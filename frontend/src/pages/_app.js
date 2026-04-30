@@ -13,7 +13,6 @@ const LOGIN_PATH = '/signup'; // Redirect path when logged out
 // Public paths accessible without the app token
 const PUBLIC_PATHS = [
   '/',          // Allow access to the root landing page
-  '/tech',      // Allow access to the /tech route
   LOGIN_PATH,   // Allow access to the signup page
   '/login',     // Allow access to a potential login page
   '/terms',     // Allow access to terms

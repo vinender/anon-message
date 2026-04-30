@@ -1,19 +1,37 @@
 // utils/dbConnect.js
-const mongoose = require('mongoose');
+const { createClient } = require('@supabase/supabase-js');
 
-const dbConnect = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      // useCreateIndex: true, // Uncomment if needed
-      // useFindAndModify: false, // Uncomment if needed
-    });
-    console.log('MongoDB connected');
-  } catch (err) {
-    console.error('Database connection error:', err);
+let supabase;
+
+const dbConnect = () => {
+  if (supabase) return supabase;
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables.');
     process.exit(1);
   }
+
+  supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  console.log('Supabase connected');
+  return supabase;
+};
+
+// Helper to get the supabase instance anywhere
+const getSupabase = () => {
+  if (!supabase) {
+    return dbConnect();
+  }
+  return supabase;
 };
 
 module.exports = dbConnect;
+module.exports.getSupabase = getSupabase;

@@ -120,17 +120,17 @@ export default function Dashboard() {
   // If user is not loaded, show loading
   if (!isUserLoaded || !user) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 border-t-4 border-b-4 border-teal-500 rounded-full animate-spin mb-4"></div>
-          <p className="text-slate-400">Loading your dashboard...</p>
+          <div className="w-16 h-16 border-t-4 border-b-4 border-emerald-500 rounded-full animate-spin mb-4"></div>
+          <p className="text-zinc-400">Loading your dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-gray-100 font-sans">
+    <div className="min-h-screen bg-zinc-950 text-gray-100 font-sans">
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
@@ -141,9 +141,9 @@ export default function Dashboard() {
         >
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-white mb-2">
-              Welcome, <span className="bg-gradient-to-r from-indigo-500 to-teal-400 bg-clip-text text-transparent">{user.name}</span>
+              Welcome, <span className="bg-gradient-to-r from-zinc-500 to-emerald-400 bg-clip-text text-transparent">{user.name}</span>
             </h1>
-            <p className="text-slate-400 max-w-2xl mx-auto">
+            <p className="text-zinc-400 max-w-2xl mx-auto">
               Share your unique link and start receiving anonymous messages from anyone. All messages are end-to-end encrypted.
             </p>
           </div>
@@ -154,34 +154,34 @@ export default function Dashboard() {
              <div className="lg:col-span-1">
               <div className="relative">
                 {/* ... background blur ... */}
-                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-teal-400/10 rounded-xl blur-xl"></div>
-                <div className="relative bg-slate-900/80 backdrop-blur-sm rounded-xl border border-slate-800 overflow-hidden">
+                 <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/10 to-emerald-400/10 rounded-xl blur-xl"></div>
+                <div className="relative bg-zinc-900/80 backdrop-blur-sm rounded-xl border border-zinc-800 overflow-hidden">
                   {/* Card Content */}
                   <div className="p-6">
                      {/* ... Header ... */}
-                    <div className="flex items-center text-teal-400 mb-4">
+                    <div className="flex items-center text-emerald-400 mb-4">
                       <FiShare2 className="h-6 w-6 mr-2" />
                       <h2 className="text-xl font-semibold">Your Shareable Link</h2>
                     </div>
-                     <p className="text-slate-400 mb-5">
+                     <p className="text-zinc-400 mb-5">
                       Share this link to receive anonymous messages. Only you can decrypt them.
                     </p>
                     {/* Link Input & Copy */}
-                    <div className="bg-slate-800/70 p-1 rounded-lg mb-6"> {/* Added mb-6 */}
+                    <div className="bg-zinc-800/70 p-1 rounded-lg mb-6"> {/* Added mb-6 */}
                       <div className="flex items-center">
                         <input
                           type="text"
                           value={shareLink || 'Generating link...'}
                           readOnly
-                          className="flex-grow px-3 py-2 bg-transparent text-sm text-slate-300 focus:outline-none"
+                          className="flex-grow px-3 py-2 bg-transparent text-sm text-zinc-300 focus:outline-none"
                         />
                         <button
                           onClick={handleCopyLink}
                           disabled={!shareLink}
                           className={`p-2 rounded-md transition ${
                             copySuccess
-                              ? 'bg-teal-500 text-white'
-                              : 'bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed'
+                              ? 'bg-emerald-500 text-white'
+                              : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed'
                           }`}
                         >
                           {copySuccess ? 'Copied!' : <FiCopy className="h-5 w-5" />}
@@ -201,10 +201,10 @@ export default function Dashboard() {
             {/* Incoming Messages Card */}
             <div className="lg:col-span-2">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-teal-400/10 rounded-xl blur-xl"></div>
-                <div className="relative bg-slate-900/80 backdrop-blur-sm rounded-xl border border-slate-800 p-6">
+                <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/10 to-emerald-400/10 rounded-xl blur-xl"></div>
+                <div className="relative bg-zinc-900/80 backdrop-blur-sm rounded-xl border border-zinc-800 p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center text-teal-400">
+                    <div className="flex items-center text-emerald-400">
                       <FiMail className="h-6 w-6 mr-2" />
                       <h2 className="text-xl font-semibold">Incoming Messages</h2>
                     </div>
@@ -212,7 +212,7 @@ export default function Dashboard() {
                     <button 
                       onClick={fetchAndDecryptMessages}
                       disabled={isFetching}
-                      className="flex items-center space-x-1 text-sm px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition"
+                      className="flex items-center space-x-1 text-sm px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition"
                     >
                       <FiRefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
                       <span>Refresh</span>
@@ -237,8 +237,8 @@ export default function Dashboard() {
                     {isFetching ? (
                       <div className="flex justify-center items-center h-full">
                         <div className="flex flex-col items-center">
-                          <div className="w-10 h-10 border-t-2 border-b-2 border-teal-500 rounded-full animate-spin mb-3"></div>
-                          <p className="text-slate-400 text-sm">Decrypting messages...</p>
+                          <div className="w-10 h-10 border-t-2 border-b-2 border-emerald-500 rounded-full animate-spin mb-3"></div>
+                          <p className="text-zinc-400 text-sm">Decrypting messages...</p>
                         </div>
                       </div>
                     ) : incomingMessages?.length > 0 ? (
@@ -264,31 +264,31 @@ export default function Dashboard() {
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.3, delay: index * 0.05 }}
-                              className={`bg-slate-800/50 backdrop-blur-sm rounded-lg p-4 transition border ${
-                                isRecent ? 'border-l-4 border-teal-400 border-t border-r border-b border-slate-700' : 'border-slate-700'
+                              className={`bg-zinc-800/50 backdrop-blur-sm rounded-lg p-4 transition border ${
+                                isRecent ? 'border-l-4 border-emerald-400 border-t border-r border-b border-zinc-700' : 'border-zinc-700'
                               }`}
                             >
                               <div className="flex items-start justify-between mb-2">
                                 {isRecent && (
-                                  <span className="inline-flex items-center bg-teal-500/20 text-teal-300 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                                  <span className="inline-flex items-center bg-emerald-500/20 text-emerald-300 text-xs font-medium px-2.5 py-0.5 rounded-full">
                                     New
                                   </span>
                                 )}
-                                <div className="flex items-center text-xs text-slate-400">
+                                <div className="flex items-center text-xs text-zinc-400">
                                   <FiClock className="h-3 w-3 mr-1" />
                                   {formattedDate}
                                 </div>
                               </div>
                               
-                              <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                              <p className="text-zinc-200 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                             </motion.div>
                           );
                         })}
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                        <div className="w-20 h-20 rounded-full bg-slate-800/50 flex items-center justify-center mb-4">
-                          <FiMail className="h-10 w-10 text-slate-500" />
+                      <div className="flex flex-col items-center justify-center h-full text-zinc-400">
+                        <div className="w-20 h-20 rounded-full bg-zinc-800/50 flex items-center justify-center mb-4">
+                          <FiMail className="h-10 w-10 text-zinc-500" />
                         </div>
                         <p className="text-lg font-medium mb-2">No messages yet</p>
                         <p className="text-sm text-center max-w-md">
