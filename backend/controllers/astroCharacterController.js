@@ -4,17 +4,20 @@ require('dotenv').config();
 
 const TEXT_MODEL_NAME = "gemini-1.5-pro-002"; // Model for text generation
 const IMAGE_MODEL_NAME = "gemini-1.5-pro-002"; //  Model for image generation
-const API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
-
-if (!API_KEY) {
-    console.error("GEMINI_API_KEY is not set in your environment variables.");
-    process.exit(1);
+let genAI;
+function getGenAI() {
+    const API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
+    if (!API_KEY) {
+        throw new Error("GEMINI_API_KEY is not set in your environment variables.");
+    }
+    if (!genAI) {
+        genAI = new GoogleGenerativeAI(API_KEY);
+    }
+    return genAI;
 }
 
-const genAI = new GoogleGenerativeAI(API_KEY);
-
 async function generateVedicPersonality(dob, time, place) {
-    const model = genAI.getGenerativeModel({ model: TEXT_MODEL_NAME });
+    const model = getGenAI().getGenerativeModel({ model: TEXT_MODEL_NAME });
 
     const prompt = `Generate a brief Vedic astrology personality description in hinglish only based on the following birth data:
         Date of Birth: ${dob}
@@ -81,7 +84,7 @@ async function generateCharacterImage(personalityDescription) {
         topK: 40,
     };
 
-    const model = genAI.getGenerativeModel({
+    const model = getGenAI().getGenerativeModel({
         model: IMAGE_MODEL_NAME, // Use the image model
         generationConfig,
         safetySettings: [

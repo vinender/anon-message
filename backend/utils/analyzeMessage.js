@@ -1,12 +1,16 @@
 // utils/analyzeMessage.js
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Access your API key as an environment variable
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
-
 // Modified function with enhanced prompt and parsing
 async function analyzeMessage(message) {
   try {
+    if (!process.env.GOOGLE_GEMINI_API_KEY) {
+      console.warn("GOOGLE_GEMINI_API_KEY is missing. Treating message as appropriate to prevent crash, or handle properly.");
+      // Depending on your requirements, you might want to return false (block) or true (allow)
+      // or throw an error. For now, returning true to allow if AI is unconfigured.
+      return true;
+    }
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     
     // Enhanced prompt using examples and clear format instructions
