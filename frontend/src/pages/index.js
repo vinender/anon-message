@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { AuthContext } from '../components/context/AuthContext';
 import Dashboard from '@/components/dashboard';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { FaLock, FaUserSecret, FaUsers, FaShieldAlt, FaEyeSlash, FaKey } from 'react-icons/fa';
 import { HiOutlineSparkles } from 'react-icons/hi';
@@ -134,7 +135,7 @@ export default function Home() {
                       'https://i.pravatar.cc/100?img=28',
                       'https://i.pravatar.cc/100?img=32',
                     ].map((url, i) => (
-                      <img key={i} className="w-10 h-10 rounded-full border-2 border-zinc-950 object-cover" src={url} alt="User avatar" />
+                      <Image key={i} className="w-10 h-10 rounded-full border-2 border-zinc-950 object-cover" src={url} alt="User avatar" width={40} height={40} />
                     ))}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-zinc-400 font-medium">
@@ -429,7 +430,7 @@ const ModerationVisualizer = () => {
             className="flex items-center space-x-6 w-full max-w-sm"
           >
             <div className="bg-zinc-800 border border-zinc-700 rounded-2xl rounded-tl-none p-5 text-sm text-zinc-200 flex-1 relative shadow-lg">
-              "Hey, I really loved your presentation today! Great job."
+              &quot;Hey, I really loved your presentation today! Great job.&quot;
             </div>
             <div className="flex-shrink-0 flex flex-col items-center">
               <div className="h-12 w-12 rounded-full bg-emerald-400/20 flex items-center justify-center text-emerald-400 mb-2 shadow-[0_0_20px_rgba(45,212,191,0.4)]">
@@ -450,7 +451,7 @@ const ModerationVisualizer = () => {
                   <FaShieldAlt /> BLOCKED BY AI
                 </span>
               </div>
-              "You are a terrible person and you should quit."
+              &quot;You are a terrible person and you should quit.&quot;
             </div>
             <div className="flex-shrink-0 flex flex-col items-center opacity-70">
               <div className="h-12 w-12 rounded-full bg-red-400/10 flex items-center justify-center text-red-400 mb-2 border border-red-400/20">
