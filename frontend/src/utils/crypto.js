@@ -149,7 +149,7 @@ export async function decryptPrivateKey(encryptedData, iv, salt, passphrase) {
       ["decrypt"]
     );
 
-    const decryptedBuffer = await crypto.subtle.decrypt(
+    const decryptedBuffer = await window.crypto.subtle.decrypt(
       {
         name: 'AES-GCM',
         iv: ivArray,

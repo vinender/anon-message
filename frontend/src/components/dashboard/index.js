@@ -51,11 +51,13 @@ export default function Dashboard() {
       }
   
       // Decrypt private key
+      const encryptionSecret = process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET || 'super_secret_passphrase_for_encryption';
+      
       const decryptedPrivateKey = await decryptPrivateKey(
         encryptedKeyData.encryptedData,
         encryptedKeyData.iv,
         encryptedKeyData.salt,
-        process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
+        encryptionSecret
       );
 
       if (!decryptedPrivateKey) {

@@ -95,9 +95,10 @@ export default function Signup() {
             // --- New User Logic ---
             console.log("New user registration via Google Auth.");
             const { publicKey, privateKey } = await generateRSAKeyPair();
+            const encryptionSecret = process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET || 'super_secret_passphrase_for_encryption';
             const encryptedPrivateKeyData = await encryptPrivateKey(
               privateKey,
-              process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET
+              encryptionSecret
             );
 
             await storePrivateKey(encryptedPrivateKeyData);
