@@ -7,6 +7,24 @@ const rateLimit = require('express-rate-limit');
 // Load environment variables
 dotenv.config();
 
+// Environment validation
+const requiredEnvVars = [
+  'JWT_SECRET',
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'GOOGLE_GEMINI_API_KEY',
+  'PRIVATE_KEY_SECRET'
+];
+
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ MISSING ENVIRONMENT VARIABLES:', missingEnvVars.join(', '));
+  // We don't process.exit(1) here to allow the /api/health endpoint to report the issue
+} else {
+  console.log('✅ All required environment variables are set.');
+}
+
 // Database connection is lazy-loaded via getSupabase() when needed.
 
 
@@ -38,6 +56,16 @@ app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/character', characterRoutes);
 app.use('/api/users', userRoutes); // Add this new line
+
+app.get('/api/health', (req, res) => {
+  const status = {
+    status: missingEnvVars.length === 0 ? 'healthy' : 'unhealthy',
+    missingVariables: missingEnvVars,
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  };
+  res.status(missingEnvVars.length === 0 ? 200 : 500).json(status);
+});
 
 app.get('/', (req, res) => {
   res.send('Hello from Express.js on Vercel!');
