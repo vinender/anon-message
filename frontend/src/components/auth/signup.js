@@ -109,7 +109,8 @@ export default function Signup() {
                 email: session.user.email,
                 name: session.user.name,
                 publicKey,
-                encryptedPrivateKey: encryptedPrivateKeyData
+                encryptedPrivateKey: encryptedPrivateKeyData,
+                credential: session.user.id // Sending the Google ID as credential
             });
             const createData = createRes.data;
             console.log("Creation response:", createData);

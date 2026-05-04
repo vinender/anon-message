@@ -240,7 +240,7 @@ exports.googleAuth = async (req, res) => {
         if (error.code === '23505') {
           return res.status(400).json({ message: 'Username or email already exists.' });
         }
-        return res.status(500).json({ message: 'Error creating user.' });
+        return res.status(500).json({ message: 'Error creating user.', error: error });
       }
 
       user = newUser;
