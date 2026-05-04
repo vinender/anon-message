@@ -7,9 +7,7 @@ const rateLimit = require('express-rate-limit');
 // Load environment variables
 dotenv.config();
 
-// Initialize Supabase connection
-const dbConnect = require('./utils/dbConnect');
-dbConnect();
+// Database connection is lazy-loaded via getSupabase() when needed.
 
 
 const app = express();
