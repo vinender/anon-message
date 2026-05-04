@@ -11,7 +11,7 @@ const dbConnect = () => {
 
   if (!supabaseUrl || !supabaseServiceKey) {
     console.error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in environment variables.');
-    process.exit(1);
+    throw new Error('Supabase environment variables are missing');
   }
 
   supabase = createClient(supabaseUrl, supabaseServiceKey, {

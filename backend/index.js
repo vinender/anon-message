@@ -17,7 +17,10 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors({
-  origin: '*',
+  origin: function (origin, callback) {
+    // Allow all origins
+    callback(null, true);
+  },
   credentials: true,
 }));
 // Routes
