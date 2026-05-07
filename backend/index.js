@@ -7,6 +7,14 @@ const rateLimit = require('express-rate-limit');
 // Load environment variables
 dotenv.config();
 
+// Silence non-essential console output in production (keep error/warn).
+if (process.env.NODE_ENV === 'production') {
+  const noop = () => {};
+  console.log = noop;
+  console.info = noop;
+  console.debug = noop;
+}
+
 // Environment validation
 const requiredEnvVars = [
   'JWT_SECRET',

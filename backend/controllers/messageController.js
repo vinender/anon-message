@@ -3,8 +3,21 @@ const { getSupabase } = require('../utils/dbConnect');
 const analyzeMessage = require('../utils/analyzeMessage');
 const crypto = require('crypto');
 
+const MAX_MESSAGE_LENGTH = 200;
+
 exports.sendMessage = async (req, res) => {
   const { encryptedMessage, message, recipientUsername } = req.body;
+
+  if (typeof message !== 'string' || message.trim().length === 0) {
+    return res.status(400).json({ message: 'Message is required.' });
+  }
+
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    return res
+      .status(400)
+      .json({ message: `Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.` });
+  }
+
   try {
     const supabase = getSupabase();
 

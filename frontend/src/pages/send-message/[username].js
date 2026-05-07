@@ -81,10 +81,12 @@ const encryptMessage = async (message, publicKey) => {
   }
 };
 
+const MAX_MESSAGE_LENGTH = 200;
+
 export default function SendMessage() {
   const router = useRouter();
   const { username } = router.query;
- 
+
   const [publicKey, setPublicKey] = useState('');
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('');
@@ -166,8 +168,9 @@ export default function SendMessage() {
   const [selectedMessage, setSelectedMessage] = useState('');
 
   const handleSampleMessageClick = (msg) => {
-    setSelectedMessage(msg);
-    setMessage(msg);
+    const truncated = msg.slice(0, MAX_MESSAGE_LENGTH);
+    setSelectedMessage(truncated);
+    setMessage(truncated);
   };
 
   const handleRemoveMessage = () => {
@@ -201,10 +204,15 @@ export default function SendMessage() {
   }, [username]);
 
   const sendMessage = async () => {
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      setStatus(`Error: Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.`);
+      return;
+    }
+
     setIsLoading(true);
     setStatus('Sending...');
     console.log('message sending...')
-    
+
     try {
       let encryptedMessage = message;
       if (typeof window !== 'undefined') {
@@ -350,15 +358,16 @@ export default function SendMessage() {
                           id="message"
                           name="message"
                           rows="4"
+                          maxLength={MAX_MESSAGE_LENGTH}
                           className="appearance-none block w-full px-4 py-3 rounded-lg border-zinc-700 bg-zinc-800/50 border placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition duration-200"
                           placeholder="Write your anonymous message..."
                           value={message}
-                          onChange={(e) => setMessage(e.target.value)}
+                          onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
                           required
                         />
                         {selectedMessage && (
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={handleRemoveMessage}
                             className="absolute top-2 right-2 text-zinc-400 hover:text-red-400 transition-colors"
                           >
@@ -366,13 +375,20 @@ export default function SendMessage() {
                           </button>
                         )}
                       </div>
+                      <div
+                        className={`mt-1 text-xs text-right ${
+                          message.length >= MAX_MESSAGE_LENGTH ? 'text-red-400' : 'text-zinc-500'
+                        }`}
+                      >
+                        {message.length}/{MAX_MESSAGE_LENGTH}
+                      </div>
                     </div>
                   </div>
 
                   <div>
                     <button
                       type="submit"
-                      disabled={isLoading || !message.trim()}
+                      disabled={isLoading || !message.trim() || message.length > MAX_MESSAGE_LENGTH}
                       className="group relative w-full flex justify-center py-3 px-4 bg-gradient-to-r from-zinc-500 to-emerald-400 text-sm font-medium rounded-lg text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-70"
                     >
                       {isLoading ? (
