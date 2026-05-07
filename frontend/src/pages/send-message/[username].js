@@ -1,11 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '../../components/navbar';
 import API_BASE_URL from '../../utils/config';
-import { motion } from 'framer-motion';
-import { FaLock, FaPaperPlane, FaTimesCircle } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  FaLock,
+  FaPaperPlane,
+  FaTimesCircle,
+  FaHeart,
+  FaUserSecret,
+  FaQuestion,
+  FaFire,
+  FaLightbulb,
+  FaStar,
+  FaHandshake,
+  FaRandom,
+} from 'react-icons/fa';
 
-// Utility functions remain the same
+const MAX_MESSAGE_LENGTH = 200;
+
 const base64ToArrayBuffer = (base64) => {
   try {
     const binaryString = atob(base64);
@@ -21,67 +34,111 @@ const base64ToArrayBuffer = (base64) => {
   }
 };
 
-const arrayBufferToBase64 = (buffer) => {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  bytes.forEach((b) => binary += String.fromCharCode(b));
-  return btoa(binary);
-};
-
 const encryptMessage = async (message, publicKey) => {
   if (typeof window === 'undefined') return message;
-  
-  try {
-    console.log('Encryption starting:', {
-      message,
-      publicKeyLength: publicKey?.length
-    });
 
-    // Create encoder and encode message
+  try {
     const encoder = new TextEncoder();
     const messageBytes = encoder.encode(message);
-    
-    // Convert public key from base64 and import
+
     const publicKeyBytes = base64ToArrayBuffer(publicKey);
     const importedPublicKey = await window.crypto.subtle.importKey(
-      "spki",
+      'spki',
       publicKeyBytes,
-      {
-        name: "RSA-OAEP",
-        hash: { name: "SHA-256" }
-      },
+      { name: 'RSA-OAEP', hash: { name: 'SHA-256' } },
       true,
-      ["encrypt"]
+      ['encrypt']
     );
-    
-    console.log('Public key imported successfully');
 
-    // Encrypt the message
     const encryptedBytes = await window.crypto.subtle.encrypt(
-      {
-        name: "RSA-OAEP",
-        hash: { name: "SHA-256" }
-      },
+      { name: 'RSA-OAEP', hash: { name: 'SHA-256' } },
       importedPublicKey,
       messageBytes
     );
-    
-    // Convert to base64
-    const encryptedBase64 = btoa(String.fromCharCode(...new Uint8Array(encryptedBytes)));
-    
-    console.log('Encryption completed:', {
-      originalLength: message.length,
-      encryptedLength: encryptedBase64.length
-    });
-    
-    return encryptedBase64;
+
+    return btoa(String.fromCharCode(...new Uint8Array(encryptedBytes)));
   } catch (error) {
     console.error('Encryption failed:', error);
     throw new Error(`Encryption failed: ${error.message}`);
   }
 };
 
-const MAX_MESSAGE_LENGTH = 200;
+const CATEGORIES = [
+  { key: 'Compliments', icon: FaHeart, accent: 'from-pink-500 to-rose-400' },
+  { key: 'Confessions', icon: FaUserSecret, accent: 'from-violet-500 to-purple-400' },
+  { key: 'Questions', icon: FaQuestion, accent: 'from-sky-500 to-cyan-400' },
+  { key: 'Roasts', icon: FaFire, accent: 'from-orange-500 to-amber-400' },
+  { key: 'Suggestions', icon: FaLightbulb, accent: 'from-yellow-400 to-amber-300' },
+  { key: 'Appreciation', icon: FaStar, accent: 'from-emerald-500 to-teal-400' },
+  { key: 'Apologies', icon: FaHandshake, accent: 'from-blue-500 to-indigo-400' },
+  { key: 'Random', icon: FaRandom, accent: 'from-fuchsia-500 to-pink-400' },
+];
+
+const SAMPLE_MESSAGES = {
+  Compliments: [
+    "You're the kind of person who makes Mondays feel less terrible. Don't stop being you.",
+    'Your energy lights up the room before you even walk in. People notice. I notice.',
+    'You make hard things look easy and easy things look fun. That is a rare superpower.',
+    "If kindness was a sport, you'd be in the hall of fame already.",
+    "You're proof that genuinely good people still exist in this very chaotic world.",
+    'Watching you handle stress is honestly inspiring. You make grace look effortless.',
+  ],
+  Confessions: [
+    "I've had a crush on you for longer than I'd ever admit out loud. There. I said it.",
+    "I laugh at your stories even when I've heard them three times. They are still funny.",
+    'I copy your music recommendations and pretend I found them myself. Sorry not sorry.',
+    "I think about that thing you said months ago more often than you'd probably guess.",
+    'Sometimes I take the long way just so I can pass by where you usually are.',
+    'I save your voice notes. I do not delete them. That is the whole confession.',
+  ],
+  Questions: [
+    'If you could undo one decision from the past year, what would it be — and why?',
+    "What's something you secretly wish more people would ask you about?",
+    "What's the smallest thing that recently made you weirdly happy?",
+    'If your week had a soundtrack, what song would be playing on repeat right now?',
+    "What's a lie you tell yourself that you already know is a lie?",
+    'What did you used to believe about adulthood that turned out to be totally wrong?',
+  ],
+  Roasts: [
+    "You're the human equivalent of a tab you forgot you opened. Iconic but slightly chaotic.",
+    "Your vibe is 'main character', but the show only got renewed for one season.",
+    'You have the confidence of a typo that refuses to be corrected.',
+    'Talking to you is like reading the terms and conditions. Long, weird, oddly compelling.',
+    "You don't have a personality, you have a playlist. And honestly? It slaps.",
+    'You text like every reply is a hostage negotiation. Relax. We are friends.',
+  ],
+  Suggestions: [
+    'Take the break. The work will still be there. You will be more useful after, I promise.',
+    'Drink water before more coffee. Future-you will write you a thank-you note.',
+    'Try saying no to one thing this week. Just one. See what happens.',
+    "Text the friend you've been meaning to text. They are probably waiting too.",
+    'Go for a walk without your phone. Even ten minutes. It does something.',
+    'Write down three things that went right today. Boring advice. Works anyway.',
+  ],
+  Appreciation: [
+    'Thanks for showing up the way you do. It matters more than you probably realize.',
+    "I don't say it enough, but you make my life a little easier just by existing in it.",
+    "You're someone I'd call at 3 AM and not even feel weird about it. That is rare.",
+    'Your patience with me lately has been everything. Genuinely. Thank you for it.',
+    "You listen in a way most people don't. I notice. I appreciate it more than I say.",
+    'You make ordinary days feel a little less ordinary. That is a real gift.',
+  ],
+  Apologies: [
+    "I'm sorry for that thing I never apologized for. You were right to be hurt by it.",
+    'I should have answered you sooner. I am sorry I did not. I am answering now.',
+    "I'm sorry I made it about me when it wasn't. That was not fair to you at all.",
+    'I owe you a real apology, not the lazy one I gave the first time. I am sorry.',
+    "I'm sorry I went quiet. It was about me, not you. You deserved better than silence.",
+  ],
+  Random: [
+    'If aliens visited Earth and only met you, humanity would have a perfectly fine reputation.',
+    'Just so you know, someone, somewhere, was thinking nice things about you today.',
+    'This message has no point. I just wanted to send something good into your inbox.',
+    "You're doing better than you think. Sign here, anonymous internet stranger.",
+    'Plot twist: you are the protagonist, and the universe is quietly rooting for you.',
+    'No reason. No agenda. Just dropping by to say I hope your day gets a little softer.',
+  ],
+};
 
 export default function SendMessage() {
   const router = useRouter();
@@ -91,81 +148,13 @@ export default function SendMessage() {
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  const messages = {
-    IT: {
-      Feedback: [
-        "Our legacy systems are held together by duct tape and prayers. Can we finally upgrade?",
-        "If you expect 24/7 support, we're going to need more than pizza as compensation.",
-        "Your 'quick fixes' create more problems than they solve. Let's plan for the long term.",
-      ],
-      Praise: [
-        "Your troubleshooting skills are so good, you could debug a butterfly effect.",
-        "Thanks to you, our network is more stable than my personal life.",
-        "You make coding look like poetry. Nerdy, nerdy poetry.",
-      ],
-      Suggestions: [
-        "Can we implement a 'no stupid questions' policy for ticket submissions?",
-        "Let's set up a 'turn it off and on again' autoresponder to save time.",
-        "We should start a betting pool on how long before the next server crash.",
-      ]
-    },
-    Design: {
-      Feedback: [
-        "Our brand guidelines are so strict, we can't even use comic sans ironically.",
-        "If we pivot our visual identity one more time, we'll be a kaleidoscope.",
-        "Our color scheme is so last season, even Internet Explorer thinks it's outdated.",
-      ],
-      Praise: [
-        "Your designs are so clean, they make Marie Kondo look like a hoarder.",
-        "You turn wireframes into works of art. It's like digital alchemy!",
-        "Your UI is so intuitive, even my grandma could navigate it.",
-      ],
-      Suggestions: [
-        "Can we have a 'Wacky Wednesday' where we break all design rules for fun?",
-        "Let's create a mood board of 'design fails' for inspiration on what not to do.",
-        "We should start a support group for designers traumatized by client feedback.",
-      ]
-    },
-    HR: {
-      Feedback: [
-        "Our onboarding process is so outdated, new hires think they've time-traveled to 1995.",
-        "The employee handbook is thicker than a George R.R. Martin novel, and just as confusing.",
-        "Our benefits package is so bad, employees are considering scurvy as a healthier option.",
-      ],
-      Praise: [
-        "You resolve conflicts so well, the UN should hire you.",
-        "Your ability to remember everyone's name is superhuman. Are you secretly an AI?",
-        "Thanks to your efforts, our turnover rate is lower than my cholesterol.",
-      ],
-      Suggestions: [
-        "Can we implement a 'Bring Your Pet to Work' day? It might improve morale... or chaos.",
-        "Let's replace performance reviews with a company-wide game of musical chairs.",
-        "We should start a rumor about free ice cream to see how fast information spreads here.",
-      ]
-    },
-    Management: {
-      Feedback: [
-        "Your 'open door policy' would be great if your door wasn't always locked.",
-        "Our meetings are so long, evolution occurs between agenda items.",
-        "Your leadership style is so hands-off, it's practically levitating.",
-      ],
-      Praise: [
-        "You navigate corporate politics so well, Machiavelli would be taking notes.",
-        "Your vision for the company is so clear, it's like you have a crystal ball.",
-        "Under your leadership, even Monday mornings feel like Friday afternoons.",
-      ],
-      Suggestions: [
-        "Let's replace KPIs with a Magic 8-Ball. It might be more accurate.",
-        "Can we implement a 'No Buzzword' day? The synergy would be disruptive.",
-        "We should have a 'Role Reversal' week where interns run the company.",
-      ]
-    }
-  };
-
-  const [activeDepartment, setActiveDepartment] = useState('IT');
-  const [activeCategory, setActiveCategory] = useState('Feedback');
+  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].key);
   const [selectedMessage, setSelectedMessage] = useState('');
+
+  const activeCategoryMeta = useMemo(
+    () => CATEGORIES.find((c) => c.key === activeCategory) || CATEGORIES[0],
+    [activeCategory]
+  );
 
   const handleSampleMessageClick = (msg) => {
     const truncated = msg.slice(0, MAX_MESSAGE_LENGTH);
@@ -184,14 +173,11 @@ export default function SendMessage() {
   };
 
   useEffect(() => {
-    // Fetch the recipient's public key
     const fetchPublicKey = async () => {
       if (username) {
         try {
           const res = await fetch(`${API_BASE_URL}/users/${username}/public-key`);
-          if (!res.ok) {
-            throw new Error('Failed to fetch public key');
-          }
+          if (!res.ok) throw new Error('Failed to fetch public key');
           const data = await res.json();
           setPublicKey(data.publicKey);
         } catch (error) {
@@ -211,23 +197,20 @@ export default function SendMessage() {
 
     setIsLoading(true);
     setStatus('Sending...');
-    console.log('message sending...')
 
     try {
       let encryptedMessage = message;
       if (typeof window !== 'undefined') {
         encryptedMessage = await encryptMessage(message, publicKey);
       }
-      
+
       const res = await fetch(`${API_BASE_URL}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ encryptedMessage,message, recipientUsername: username }),
+        body: JSON.stringify({ encryptedMessage, message, recipientUsername: username }),
       });
-      
-      if (!res.ok) {
-        throw new Error('Failed to send message');
-      }
+
+      if (!res.ok) throw new Error('Failed to send message');
 
       const data = await res.json();
       setStatus(data.status || 'Message sent successfully');
@@ -241,179 +224,219 @@ export default function SendMessage() {
     }
   };
 
+  const charCount = message.length;
+  const charPct = Math.min(100, (charCount / MAX_MESSAGE_LENGTH) * 100);
+  const overLimit = charCount >= MAX_MESSAGE_LENGTH;
+  const ActiveIcon = activeCategoryMeta.icon;
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-gray-100 font-sans">
+    <div className="min-h-screen bg-zinc-950 text-gray-100 font-sans relative overflow-hidden">
+      {/* Background glow */}
+      <div className="pointer-events-none absolute inset-0 -z-0">
+        <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="absolute top-1/3 -right-40 h-96 w-96 rounded-full bg-fuchsia-500/10 blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl" />
+      </div>
+
       <Navbar />
-      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-8">
-        <motion.div 
+
+      <div className="relative flex items-start justify-center min-h-[calc(100vh-80px)] px-4 py-10">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="max-w-2xl w-full space-y-8"
+          className="max-w-3xl w-full space-y-8"
         >
+          {/* Header */}
           <div className="text-center">
-            <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-zinc-500 to-emerald-400 flex items-center justify-center mb-6">
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mb-5 shadow-lg shadow-emerald-500/20">
               <FaLock className="text-white text-xl" />
             </div>
-            <h2 className="text-3xl font-bold text-white">
-              Send Anonymous Message
-            </h2>
-            <p className="mt-3 text-zinc-400">
-              {username ? `To: ${username}` : 'Loading recipient...'}
-            </p>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+              Send an anonymous message
+            </h1>
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-900/70 border border-zinc-800 text-sm text-zinc-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              {username ? <>To <span className="font-medium text-white">@{username}</span></> : 'Loading recipient…'}
+            </div>
           </div>
 
-          <div className="mt-10">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/10 to-emerald-400/10 rounded-xl blur-xl"></div>
-              <div className="relative bg-zinc-900/80 backdrop-blur-sm p-8 rounded-xl border border-zinc-800">
+          {/* Card */}
+          <div className="relative">
+            <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-emerald-500/20 via-transparent to-fuchsia-500/20 blur-md" />
+            <div className="relative bg-zinc-900/80 backdrop-blur-xl rounded-2xl border border-zinc-800 p-6 sm:p-8 shadow-2xl shadow-black/30">
+              {/* Status */}
+              <AnimatePresence>
                 {status && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`mb-6 ${
-                      status.includes('Error') 
-                        ? 'bg-red-500/10 border border-red-500/20 text-red-200' 
-                        : 'bg-green-500/10 border border-green-500/20 text-green-200'
-                    } p-4 rounded-lg`}
+                    exit={{ opacity: 0, y: -8 }}
+                    className={`mb-6 p-4 rounded-xl text-sm font-medium border ${
+                      status.toLowerCase().includes('error')
+                        ? 'bg-red-500/10 border-red-500/20 text-red-200'
+                        : status === 'Sending...'
+                        ? 'bg-zinc-500/10 border-zinc-500/20 text-zinc-200'
+                        : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200'
+                    }`}
                   >
-                    <p className="text-sm font-medium">{status}</p>
+                    {status}
                   </motion.div>
                 )}
-                
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-300 mb-2">
-                        Select Department
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.keys(messages).map((department) => (
-                          <button
-                            type="button"
-                            key={department}
-                            onClick={() => setActiveDepartment(department)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                              activeDepartment === department
-                                ? 'bg-gradient-to-r from-zinc-500 to-emerald-400 text-white shadow-lg shadow-emerald-500/20'
-                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                            }`}
-                          >
-                            {department}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+              </AnimatePresence>
 
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-300 mb-2">
-                        Select Category
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.keys(messages[activeDepartment]).map((category) => (
-                          <button
-                            type="button"
-                            key={category}
-                            onClick={() => setActiveCategory(category)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                              activeCategory === category
-                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                            }`}
-                          >
-                            {category}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+              <form onSubmit={handleSubmit} className="space-y-7">
+                {/* Categories */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium text-zinc-300">Pick a vibe</label>
+                    <span className="text-xs text-zinc-500">Optional — for inspiration</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {CATEGORIES.map(({ key, icon: Icon, accent }) => {
+                      const active = activeCategory === key;
+                      return (
+                        <button
+                          type="button"
+                          key={key}
+                          onClick={() => setActiveCategory(key)}
+                          className={`group inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border ${
+                            active
+                              ? `bg-gradient-to-r ${accent} text-white border-transparent shadow-lg shadow-black/30`
+                              : 'bg-zinc-800/60 text-zinc-300 border-zinc-700 hover:bg-zinc-800 hover:text-white'
+                          }`}
+                        >
+                          <Icon className={`text-[11px] ${active ? 'text-white' : 'text-zinc-400 group-hover:text-white'}`} />
+                          {key}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-300 mb-2">
-                        Sample Messages
-                      </label>
-                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-800">
-                        {messages[activeDepartment][activeCategory].map((msg, index) => (
+                {/* Sample messages */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                      <ActiveIcon className="text-zinc-400 text-xs" />
+                      Sample {activeCategory.toLowerCase()}
+                    </label>
+                    <span className="text-xs text-zinc-500">Tap to use</span>
+                  </div>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeCategory}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.18 }}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
+                    >
+                      {SAMPLE_MESSAGES[activeCategory].map((msg, index) => {
+                        const isSelected = selectedMessage === msg;
+                        return (
                           <button
                             type="button"
                             key={index}
                             onClick={() => handleSampleMessageClick(msg)}
-                            className={`text-left text-xs p-3 rounded-lg transition-all duration-200 ${
-                              selectedMessage === msg
-                                ? 'bg-zinc-500/20 border border-zinc-500/30 text-zinc-200'
-                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                            className={`text-left text-xs sm:text-sm leading-relaxed p-3 rounded-xl border transition-all duration-200 ${
+                              isSelected
+                                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-100 shadow-inner'
+                                : 'bg-zinc-800/60 border-zinc-700/70 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-600 hover:text-white'
                             }`}
                           >
                             {msg}
                           </button>
-                        ))}
-                      </div>
-                    </div>
+                        );
+                      })}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
 
-                    <div>
-                      <label htmlFor="message" className="block text-sm font-medium text-zinc-300 mb-2">
-                        Your Message
-                      </label>
-                      <div className="relative">
-                        <textarea
-                          id="message"
-                          name="message"
-                          rows="4"
-                          maxLength={MAX_MESSAGE_LENGTH}
-                          className="appearance-none block w-full px-4 py-3 rounded-lg border-zinc-700 bg-zinc-800/50 border placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition duration-200"
-                          placeholder="Write your anonymous message..."
-                          value={message}
-                          onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
-                          required
-                        />
-                        {selectedMessage && (
-                          <button
-                            type="button"
-                            onClick={handleRemoveMessage}
-                            className="absolute top-2 right-2 text-zinc-400 hover:text-red-400 transition-colors"
-                          >
-                            <FaTimesCircle />
-                          </button>
-                        )}
-                      </div>
-                      <div
-                        className={`mt-1 text-xs text-right ${
-                          message.length >= MAX_MESSAGE_LENGTH ? 'text-red-400' : 'text-zinc-500'
-                        }`}
-                      >
-                        {message.length}/{MAX_MESSAGE_LENGTH}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <button
-                      type="submit"
-                      disabled={isLoading || !message.trim() || message.length > MAX_MESSAGE_LENGTH}
-                      className="group relative w-full flex justify-center py-3 px-4 bg-gradient-to-r from-zinc-500 to-emerald-400 text-sm font-medium rounded-lg text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-70"
+                {/* Message input */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label htmlFor="message" className="text-sm font-medium text-zinc-300">
+                      Your message
+                    </label>
+                    <span
+                      className={`text-xs tabular-nums ${
+                        overLimit ? 'text-red-400' : charCount > MAX_MESSAGE_LENGTH * 0.8 ? 'text-amber-400' : 'text-zinc-500'
+                      }`}
                     >
-                      {isLoading ? (
-                        <span className="animate-pulse">Sending message...</span>
-                      ) : (
-                        <span className="flex items-center">
-                          <FaPaperPlane className="mr-2" /> 
-                          Send Anonymous Message
-                        </span>
-                      )}
-                    </button>
+                      {charCount}/{MAX_MESSAGE_LENGTH}
+                    </span>
                   </div>
-                </form>
-              </div>
-            </div>
-            
-            <div className="mt-8 text-center">
-              <p className="text-xs text-zinc-500">
-                By sending this message, you agree that the content follows our{' '}
-                <a href="/guidelines" className="text-emerald-400 hover:text-emerald-300">
-                  Community Guidelines
-                </a>
-              </p>
+                  <div className="relative">
+                    <textarea
+                      id="message"
+                      name="message"
+                      rows="5"
+                      maxLength={MAX_MESSAGE_LENGTH}
+                      className="block w-full px-4 py-3 pr-10 rounded-xl bg-zinc-800/60 border border-zinc-700 placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition resize-none"
+                      placeholder="Say the thing. They'll never know it was you."
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
+                      required
+                    />
+                    {message && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveMessage}
+                        className="absolute top-2.5 right-2.5 text-zinc-500 hover:text-red-400 transition-colors"
+                        aria-label="Clear message"
+                      >
+                        <FaTimesCircle />
+                      </button>
+                    )}
+                  </div>
+                  {/* Character progress bar */}
+                  <div className="mt-2 h-1 w-full rounded-full bg-zinc-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-200 ${
+                        overLimit
+                          ? 'bg-red-500'
+                          : charPct > 80
+                          ? 'bg-amber-400'
+                          : 'bg-gradient-to-r from-emerald-400 to-teal-400'
+                      }`}
+                      style={{ width: `${charPct}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={isLoading || !message.trim() || overLimit}
+                  className="group relative w-full flex justify-center items-center gap-2 py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-emerald-500/20"
+                >
+                  {isLoading ? (
+                    <span className="animate-pulse">Encrypting & sending…</span>
+                  ) : (
+                    <>
+                      <FaPaperPlane className="text-xs transition-transform group-hover:translate-x-0.5" />
+                      Send anonymously
+                    </>
+                  )}
+                </button>
+
+                {/* Privacy note */}
+                <div className="flex items-center justify-center gap-2 text-xs text-zinc-500">
+                  <FaLock className="text-[10px]" />
+                  End-to-end encrypted. The recipient is the only one who can read it.
+                </div>
+              </form>
             </div>
           </div>
+
+          <p className="text-center text-xs text-zinc-500">
+            By sending this message, you agree it follows our{' '}
+            <a href="/guidelines" className="text-emerald-400 hover:text-emerald-300 underline-offset-2 hover:underline">
+              Community Guidelines
+            </a>
+            .
+          </p>
         </motion.div>
       </div>
     </div>
