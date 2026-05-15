@@ -95,29 +95,46 @@ export default function Signup() {
   // Complete signup after passphrase saved
   const handleFinishSignup = async () => {
     if (!passphraseConfirmed) return;
-    setProcessingMessage('Finishing setup...');
+    setProcessingMessage('Creating your account...');
     setIsProcessingSignup(true);
 
-    try {
-      if (newKeyData) {
-        const authRes = await axiosInstance.post('/auth/google', {
-          email: session.user.email,
-          name: session.user.name,
-          publicKey: newKeyData.publicKey,
-          encryptedPrivateKey: newKeyData.encryptedPrivateKey,
-          credential: session.user.id,
-        });
+    const payload = {
+      email: session.user.email,
+      name: session.user.name,
+      publicKey: newKeyData.publicKey,
+      encryptedPrivateKey: newKeyData.encryptedPrivateKey,
+      credential: session.user.id,
+    };
+
+    // Retry on timeout (free-tier Supabase cold starts can take >10s).
+    // The INSERT often succeeds server-side even when Vercel times out.
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          setProcessingMessage(`Retrying (attempt ${attempt + 1}/3)...`);
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+
+        const authRes = await axiosInstance.post('/auth/google', payload, { timeout: 15000 });
+
         localStorage.setItem('token', authRes.data.token);
         localStorage.setItem('_pp', generatedPassphrase);
         sessionStorage.setItem('_pp', generatedPassphrase);
+        router.push('/');
+        return;
+      } catch (err) {
+        lastError = err;
+        const status = err.response?.status;
+        // Only retry on timeout/gateway errors, not on client errors
+        if (status === 504 || !status) continue;
+        break; // 4xx/5xx (non-timeout) — don't retry
       }
-
-      router.push('/');
-    } catch (err) {
-      const errMsg = err.response?.data?.message || err.message;
-      setErrors({ apiError: `Signup failed: ${errMsg}` });
-      setIsProcessingSignup(false);
     }
+
+    const errMsg = lastError?.response?.data?.message || lastError?.message || 'Signup failed';
+    setErrors({ apiError: `Signup failed: ${errMsg}` });
+    setIsProcessingSignup(false);
   };
 
   useEffect(() => {
