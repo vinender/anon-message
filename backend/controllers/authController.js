@@ -181,82 +181,54 @@ exports.googleAuth = async (req, res) => {
   try {
     const supabase = getSupabase();
 
-    // Check if user already exists by email
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (existingUser) {
-      const token = jwt.sign(
-        {
-          userId: existingUser.id,
-          username: existingUser.username,
-          email: existingUser.email,
-          publicKey: existingUser.public_key,
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '1d' }
-      );
-      return res.status(200).json({ token });
-    }
-
-    // New user — derive base username from name, append short random suffix
-    // so we don't need a loop (each Supabase query takes ~8s on free tier).
-    const base = name.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20) || 'user';
+    const base = (name || 'user').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20) || 'user';
     const username = `${base}_${crypto.randomBytes(4).toString('hex')}`;
 
-    const { data: newUser, error } = await supabase
-      .from('users')
-      .insert({
-        username,
-        email,
-        google_id: credential,
-        public_key: publicKey,
-        encrypted_private_key: JSON.stringify(encryptedPrivateKey),
-      })
-      .select()
-      .single();
+    // Single RPC call — find or create user in one query (avoids free-tier timeout)
+    const { data: user, error } = await supabase.rpc('upsert_user_by_email', {
+      p_email: email,
+      p_username: username,
+      p_google_id: credential,
+      p_public_key: publicKey,
+      p_encrypted_private_key: JSON.stringify(encryptedPrivateKey),
+    });
 
-    if (error) {
-      console.error('Supabase insert error:', error);
-      if (error.code === '23505') {
-        // Collision on username or email — retry once with different suffix
+    if (error || !user) {
+      console.error('upsert_user_by_email RPC error:', error);
+
+      // Retry once on username collision
+      if (error && error.code === '23505') {
         const retryUsername = `${base}_${crypto.randomBytes(6).toString('hex')}`;
-        const { data: retryUser, error: retryError } = await supabase
-          .from('users')
-          .insert({
-            username: retryUsername,
-            email,
-            google_id: credential,
-            public_key: publicKey,
-            encrypted_private_key: JSON.stringify(encryptedPrivateKey),
-          })
-          .select()
-          .single();
+        const { data: retryUser, error: retryError } = await supabase.rpc('upsert_user_by_email', {
+          p_email: email,
+          p_username: retryUsername,
+          p_google_id: credential,
+          p_public_key: publicKey,
+          p_encrypted_private_key: JSON.stringify(encryptedPrivateKey),
+        });
 
-        if (retryError) {
+        if (retryError || !retryUser) {
           return res.status(500).json({ message: 'Error creating user.', error: retryError });
         }
-        newUser = retryUser;
-      } else {
-        return res.status(500).json({ message: 'Error creating user.', error: error });
+
+        const token = jwt.sign(
+          { userId: retryUser.id, username: retryUser.username, email: retryUser.email, publicKey: retryUser.public_key },
+          process.env.JWT_SECRET,
+          { expiresIn: '1d' }
+        );
+        return res.status(retryUser.is_new ? 201 : 200).json({ token });
       }
+
+      return res.status(500).json({ message: 'Error creating user.', error });
     }
 
     const token = jwt.sign(
-      {
-        userId: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        publicKey: newUser.public_key,
-      },
+      { userId: user.id, username: user.username, email: user.email, publicKey: user.public_key },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    res.status(201).json({ token });
+    res.status(user.is_new ? 201 : 200).json({ token });
   } catch (error) {
     console.error('Google Auth Error:', error);
     res.status(500).json({

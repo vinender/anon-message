@@ -61,6 +61,52 @@ CREATE TRIGGER update_users_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 -- ========================
+-- RPC: upsert user by email (single query — avoids free-tier cold-start timeout)
+-- ========================
+CREATE OR REPLACE FUNCTION upsert_user_by_email(
+  p_email VARCHAR,
+  p_username VARCHAR,
+  p_google_id VARCHAR,
+  p_public_key TEXT,
+  p_encrypted_private_key TEXT
+)
+RETURNS JSONB AS $$
+DECLARE
+  v_user RECORD;
+BEGIN
+  -- Try to find existing user
+  SELECT id, username, email, public_key
+  INTO v_user
+  FROM users
+  WHERE email = p_email;
+
+  IF FOUND THEN
+    RETURN jsonb_build_object(
+      'id', v_user.id,
+      'username', v_user.username,
+      'email', v_user.email,
+      'public_key', v_user.public_key,
+      'is_new', false
+    );
+  END IF;
+
+  -- Insert new user
+  INSERT INTO users (username, email, google_id, public_key, encrypted_private_key)
+  VALUES (p_username, p_email, p_google_id, p_public_key, p_encrypted_private_key)
+  RETURNING id, username, email, public_key
+  INTO v_user;
+
+  RETURN jsonb_build_object(
+    'id', v_user.id,
+    'username', v_user.username,
+    'email', v_user.email,
+    'public_key', v_user.public_key,
+    'is_new', true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ========================
 -- ROW LEVEL SECURITY (RLS)
 -- ========================
 -- Disable RLS since we're using service role key from backend
