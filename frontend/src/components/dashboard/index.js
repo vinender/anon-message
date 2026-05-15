@@ -50,14 +50,17 @@ export default function Dashboard() {
         throw new Error('Private key not found');
       }
   
-      // Decrypt private key
-      const encryptionSecret = process.env.NEXT_PUBLIC_PRIVATE_KEY_SECRET || 'super_secret_passphrase_for_encryption';
-      
+      // Decrypt private key with user's passphrase
+      const passphrase = sessionStorage.getItem('_pp') || localStorage.getItem('_pp');
+      if (!passphrase) {
+        throw new Error('Encryption passphrase not found. Please log in again.');
+      }
+
       const decryptedPrivateKey = await decryptPrivateKey(
         encryptedKeyData.encryptedData,
         encryptedKeyData.iv,
         encryptedKeyData.salt,
-        encryptionSecret
+        passphrase
       );
 
       if (!decryptedPrivateKey) {

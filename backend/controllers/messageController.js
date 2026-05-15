@@ -1,21 +1,19 @@
 // controllers/messageController.js
 const { getSupabase } = require('../utils/dbConnect');
-const analyzeMessage = require('../utils/analyzeMessage');
-const crypto = require('crypto');
 
-const MAX_MESSAGE_LENGTH = 200;
+const MAX_ENCRYPTED_LENGTH = 10000; // generous max for hybrid-encrypted payload
 
 exports.sendMessage = async (req, res) => {
-  const { encryptedMessage, message, recipientUsername } = req.body;
+  const { encryptedMessage, recipientUsername } = req.body;
 
-  if (typeof message !== 'string' || message.trim().length === 0) {
-    return res.status(400).json({ message: 'Message is required.' });
+  if (typeof encryptedMessage !== 'string' || encryptedMessage.trim().length === 0) {
+    return res.status(400).json({ message: 'Encrypted message is required.' });
   }
 
-  if (message.length > MAX_MESSAGE_LENGTH) {
+  if (encryptedMessage.length > MAX_ENCRYPTED_LENGTH) {
     return res
       .status(400)
-      .json({ message: `Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.` });
+      .json({ message: `Message payload must be ${MAX_ENCRYPTED_LENGTH} bytes or fewer.` });
   }
 
   try {
@@ -32,30 +30,21 @@ exports.sendMessage = async (req, res) => {
       return res.status(404).json({ message: 'Recipient not found.' });
     }
 
-    // Analyze sentiment
-    const isAppropriate = await analyzeMessage(message);
-    console.log('is appropriate', isAppropriate);
+    // Store only encrypted ciphertext. Server never sees plaintext.
+    const { error: insertError } = await supabase
+      .from('messages')
+      .insert({
+        content: encryptedMessage,
+        recipient_id: recipient.id,
+        sender_id: null, // always anonymous — sender identity never stored
+      });
 
-    // Conditional message saving based on sentiment analysis
-    if (isAppropriate) {
-      // Save encrypted message
-      const { error: insertError } = await supabase
-        .from('messages')
-        .insert({
-          content: encryptedMessage,
-          recipient_id: recipient.id,
-          sender_id: req.user ? req.user.id : null,
-        });
-
-      if (insertError) {
-        console.error('Message insert error:', insertError);
-        return res.status(500).json({ message: 'Error saving message.' });
-      }
-
-      res.json({ status: 'Message sent!' });
-    } else {
-      res.status(400).json({ message: 'Message not sent: The message content was deemed negative.' });
+    if (insertError) {
+      console.error('Message insert error:', insertError);
+      return res.status(500).json({ message: 'Error saving message.' });
     }
+
+    res.json({ status: 'Message sent!' });
   } catch (error) {
     console.error('Send Message Error:', error);
     res.status(500).json({ message: 'Error sending message.' });

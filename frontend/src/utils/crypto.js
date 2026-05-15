@@ -1,256 +1,180 @@
 // utils/crypto.js
+// Hybrid encryption: AES-256-GCM for message body, RSA-2048-OAEP for AES key.
+// Private key: encrypted with AES-256-GCM using PBKDF2-derived key from user passphrase.
+// Server never sees plaintext — no shared secret, no env-var passphrase.
 
-// Base conversion utilities
+// ── Base64 / ArrayBuffer helpers ──────────────────────────────────────────
+
 export function arrayBufferToBase64(buffer) {
-  let binary = '';
   const bytes = new Uint8Array(buffer);
+  let binary = '';
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return window.btoa(binary);
+  return btoa(binary);
 }
 
-// Helper function to properly pad base64 strings
-function padBase64(base64) {
-  return base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
-}
-
-// Improved base64 conversion functions
 export function base64ToArrayBuffer(base64) {
   try {
-    // Remove any whitespace and PEM headers
-    const cleanBase64 = base64
-      .replace(/[\s\-]/g, '')
-      .replace(/BEGIN.*?KEY\-+/, '')
-      .replace(/END.*?KEY\-+/, '');
-
-    // Add padding if necessary
-    const paddedBase64 = cleanBase64.padEnd(
-      cleanBase64.length + (4 - (cleanBase64.length % 4)) % 4,
-      '='
-    );
-
-    // Convert to binary string
-    const binaryString = atob(paddedBase64);
-    
-    // Convert to Uint8Array
+    const clean = base64.replace(/[\s\-]/g, '').replace(/-----BEGIN.*?KEY-----/g, '').replace(/-----END.*?KEY-----/g, '');
+    const padded = clean.padEnd(clean.length + ((4 - (clean.length % 4)) % 4), '=');
+    const binaryString = atob(padded);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-    
     return bytes.buffer;
-  } catch (error) {
-    console.error('Base64 conversion failed:', {
-      error,
-      inputLength: base64?.length,
-      inputSample: base64?.substring(0, 50)
-    });
-    throw error;
+  } catch (err) {
+    throw new Error('Invalid base64 input');
   }
 }
-// Key material generation
-async function getKeyMaterial(passphrase) {
-  const encoder = new TextEncoder();
-  return await window.crypto.subtle.importKey(
-    "raw",
-    encoder.encode(passphrase),
-    { name: "PBKDF2" },
+
+function concatBuffers(...buffers) {
+  const total = buffers.reduce((s, b) => s + b.byteLength, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const b of buffers) {
+    out.set(new Uint8Array(b), offset);
+    offset += b.byteLength;
+  }
+  return out.buffer;
+}
+
+// ── Passphrase generation ─────────────────────────────────────────────────
+
+export function generateEncryptionPassphrase() {
+  const bytes = crypto.getRandomValues(new Uint8Array(20));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ── RSA key generation ────────────────────────────────────────────────────
+
+export async function generateRSAKeyPair() {
+  const keyPair = await crypto.subtle.generateKey(
+    { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+    true,
+    ['encrypt', 'decrypt']
+  );
+  const [spki, pkcs8] = await Promise.all([
+    crypto.subtle.exportKey('spki', keyPair.publicKey),
+    crypto.subtle.exportKey('pkcs8', keyPair.privateKey),
+  ]);
+  return { publicKey: arrayBufferToBase64(spki), privateKey: arrayBufferToBase64(pkcs8) };
+}
+
+// ── Private-key wrapping (passphrase → PBKDF2 → AES-256-GCM) ─────────────
+
+async function deriveKeyFromPassphrase(passphrase, salt, usage) {
+  const keyMaterial = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 600000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
     false,
-    ["deriveKey"]
+    [usage]
   );
 }
 
-// Core cryptographic functions
-export async function generateRSAKeyPair() {
-  try {
-    const keyPair = await window.crypto.subtle.generateKey(
-      {
-        name: "RSA-OAEP",
-        modulusLength: 2048,
-        publicExponent: new Uint8Array([1, 0, 1]),
-        hash: "SHA-256",
-      },
-      true,
-      ["encrypt", "decrypt"]
-    );
-
-    const exportedPublicKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
-    const exportedPrivateKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
-
-    return {
-      publicKey: arrayBufferToBase64(exportedPublicKey),
-      privateKey: arrayBufferToBase64(exportedPrivateKey)
-    };
-  } catch (error) {
-    console.error("Error generating RSA key pair:", error);
-    throw error;
-  }
-}
-
 export async function encryptPrivateKey(privateKeyBase64, passphrase) {
-  try {
-    const privateKeyBuffer = base64ToArrayBuffer(privateKeyBase64);
-    const iv = window.crypto.getRandomValues(new Uint8Array(12));
-    const salt = window.crypto.getRandomValues(new Uint8Array(16));
-    
-    const keyMaterial = await getKeyMaterial(passphrase);
-    const key = await window.crypto.subtle.deriveKey(
-      {
-        name: "PBKDF2",
-        salt: salt,
-        iterations: 100000,
-        hash: "SHA-256",
-      },
-      keyMaterial,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["encrypt"]
-    );
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await deriveKeyFromPassphrase(passphrase, salt, 'encrypt');
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, base64ToArrayBuffer(privateKeyBase64));
 
-    const encryptedBuffer = await window.crypto.subtle.encrypt(
-      {
-        name: "AES-GCM",
-        iv: iv,
-        tagLength: 128,
-      },
-      key,
-      privateKeyBuffer
-    );
+  return {
+    iv: arrayBufferToBase64(iv.buffer),
+    encryptedData: arrayBufferToBase64(ciphertext),
+    salt: arrayBufferToBase64(salt.buffer),
+  };
+}
 
-    return {
-      iv: btoa(String.fromCharCode(...iv)),
-      encryptedData: btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer))),
-      salt: btoa(String.fromCharCode(...salt))
-    };
-  } catch (error) {
-    console.error("Error encrypting private key:", error);
-    throw error;
+export async function decryptPrivateKey(encryptedDataB64, ivB64, saltB64, passphrase) {
+  const iv = new Uint8Array(base64ToArrayBuffer(ivB64));
+  const salt = new Uint8Array(base64ToArrayBuffer(saltB64));
+  const ciphertext = base64ToArrayBuffer(encryptedDataB64);
+  const key = await deriveKeyFromPassphrase(passphrase, salt, 'decrypt');
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+  return arrayBufferToBase64(plain);
+}
+
+// ── Import RSA keys ───────────────────────────────────────────────────────
+
+async function importPublicKeySpki(base64) {
+  return crypto.subtle.importKey('spki', base64ToArrayBuffer(base64), { name: 'RSA-OAEP', hash: 'SHA-256' }, true, ['encrypt']);
+}
+
+async function importPrivateKeyPkcs8(base64) {
+  return crypto.subtle.importKey('pkcs8', base64ToArrayBuffer(base64), { name: 'RSA-OAEP', hash: 'SHA-256' }, true, ['decrypt']);
+}
+
+// ── Hybrid encryption (AES-256-GCM body + RSA-OAEP-wrapped AES key) ───────
+
+const AES_KEY_BYTES = 32;          // AES-256
+const RSA_ENC_AES_KEY_BYTES = 256; // 2048-bit RSA-OAEP output
+
+export async function hybridEncrypt(plaintext, recipientPublicKeyB64) {
+  // 1. Generate random AES-256 key
+  const aesKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt']);
+
+  // 2. Export raw AES key
+  const rawAesKey = await crypto.subtle.exportKey('raw', aesKey);
+
+  // 3. Encrypt message with AES-256-GCM
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(plaintext);
+  const aesCiphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, encoded);
+
+  // 4. Wrap AES key with recipient's RSA public key
+  const rsaPublicKey = await importPublicKeySpki(recipientPublicKeyB64);
+  const encryptedAesKey = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, rsaPublicKey, rawAesKey);
+
+  // 5. Pack: encryptedAesKey (256) || iv (12) || aesCiphertext (variable)
+  const payload = concatBuffers(encryptedAesKey, iv.buffer, aesCiphertext);
+  return arrayBufferToBase64(payload);
+}
+
+export async function hybridDecrypt(encryptedPayloadB64, privateKeyB64) {
+  const payload = base64ToArrayBuffer(encryptedPayloadB64);
+  const payloadBytes = new Uint8Array(payload);
+
+  // Parse: first 256 bytes = encrypted AES key, next 12 = IV, rest = AES-GCM ciphertext
+  if (payloadBytes.length < RSA_ENC_AES_KEY_BYTES + 12 + 1) {
+    throw new Error('Encrypted payload too short');
   }
+
+  const encryptedAesKey = payloadBytes.slice(0, RSA_ENC_AES_KEY_BYTES).buffer;
+  const iv = payloadBytes.slice(RSA_ENC_AES_KEY_BYTES, RSA_ENC_AES_KEY_BYTES + 12);
+  const aesCiphertext = payloadBytes.slice(RSA_ENC_AES_KEY_BYTES + 12).buffer;
+
+  // 1. Unwrap AES key with recipient's RSA private key
+  const rsaPrivateKey = await importPrivateKeyPkcs8(privateKeyB64);
+  const rawAesKey = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, rsaPrivateKey, encryptedAesKey);
+
+  // 2. Import unwrapped AES key
+  const aesKey = await crypto.subtle.importKey('raw', rawAesKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+
+  // 3. Decrypt message
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, aesCiphertext);
+  return new TextDecoder().decode(plain);
 }
 
-export async function decryptPrivateKey(encryptedData, iv, salt, passphrase) {
-  try {
-    const ivArray = Uint8Array.from(atob(iv), c => c.charCodeAt(0));
-    const encryptedDataArray = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
-    const saltArray = Uint8Array.from(atob(salt), c => c.charCodeAt(0));
-
-    const keyMaterial = await getKeyMaterial(passphrase);
-    const key = await window.crypto.subtle.deriveKey(
-      {
-        name: "PBKDF2",
-        salt: saltArray,
-        iterations: 100000,
-        hash: "SHA-256",
-      },
-      keyMaterial,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["decrypt"]
-    );
-
-    const decryptedBuffer = await window.crypto.subtle.decrypt(
-      {
-        name: 'AES-GCM',
-        iv: ivArray,
-      },
-      key,
-      encryptedDataArray
-    );
-
-    return arrayBufferToBase64(decryptedBuffer);
-  } catch (error) {
-    console.error('Decryption failed:', error);
-    throw error;
-  }
-}
-// Add this helper function to format PEM key
-function addPEMFormatting(base64Key) {
-  return `-----BEGIN PRIVATE KEY-----\n${base64Key}\n-----END PRIVATE KEY-----`;
-}
-
-// Add this function to check if a string is valid base64
-function isValidBase64(str) {
-  try {
-    return btoa(atob(str)) === str;
-  } catch (e) {
-    return false;
-  }
-}
-async function importPrivateKey(privateKeyBase64) {
-  try {
-    // Clean the key string
-    const cleanKey = privateKeyBase64
-      .replace(/-----BEGIN PRIVATE KEY-----/g, '')
-      .replace(/-----END PRIVATE KEY-----/g, '')
-      .replace(/[\r\n\s]/g, '');
-
-    // Convert to binary
-    const binaryString = atob(cleanKey);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    // Import the key
-    return await window.crypto.subtle.importKey(
-      "pkcs8",
-      bytes.buffer,
-      {
-        name: "RSA-OAEP",
-        hash: { name: "SHA-256" }
-      },
-      true,
-      ["decrypt"]
-    );
-  } catch (error) {
-    console.error('Private key import failed:', error);
-    throw error;
-  }
-}
+// ── Legacy decryptMessage — supports both old RSA-only format and new hybrid ──
+// Old format: base64(RSA-OAEP ciphertext) — ~190 byte limit, used before hybrid refactor
+// New format: base64(encryptedAesKey(256) || iv(12) || AES-GCM ciphertext)
 
 export async function decryptMessage(encryptedContent, privateKeyBase64) {
   try {
-    console.log('Starting decryption:', {
-      encryptedLength: encryptedContent?.length,
-      privateKeyLength: privateKeyBase64?.length
-    });
-
-    // Import private key
-    const privateKey = await importPrivateKey(privateKeyBase64);
-    console.log('Private key imported successfully');
-
-    // Convert encrypted content from base64 to bytes
+    // Try hybrid decrypt first (new format)
+    return await hybridDecrypt(encryptedContent, privateKeyBase64);
+  } catch {
+    // Fallback: old format — RSA-OAEP only
     const encryptedBytes = new Uint8Array(
-      atob(encryptedContent).split('').map(char => char.charCodeAt(0))
+      atob(encryptedContent)
+        .split('')
+        .map((c) => c.charCodeAt(0))
     ).buffer;
-
-    console.log('Encrypted content prepared:', {
-      byteLength: encryptedBytes.byteLength
-    });
-
-    // Decrypt the content
-    const decryptedBytes = await window.crypto.subtle.decrypt(
-      {
-        name: "RSA-OAEP",
-        hash: { name: "SHA-256" }
-      },
-      privateKey,
-      encryptedBytes
-    );
-
-    // Decode the result
-    const decryptedText = new TextDecoder().decode(decryptedBytes);
-    console.log('Decryption successful');
-    
-    return decryptedText;
-  } catch (error) {
-    console.error('Decryption failed:', {
-      error,
-      errorType: error.constructor.name,
-      errorMessage: error.message,
-      encryptedContentSample: encryptedContent?.substring(0, 50)
-    });
-    throw error;
+    const rsaPrivateKey = await importPrivateKeyPkcs8(privateKeyBase64);
+    const decrypted = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, rsaPrivateKey, encryptedBytes);
+    return new TextDecoder().decode(decrypted);
   }
 }

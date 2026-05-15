@@ -2,12 +2,13 @@
 
 import { createContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession, signIn, signOut } from 'next-auth/react'; // Import useSession, signIn, signOut
+import { useSession, signIn, signOut } from 'next-auth/react';
+import API_BASE_URL from '../../utils/config';
 
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const { data: session, status } = useSession(); // Get session data
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   const [user, setUser] = useState(null);
@@ -17,35 +18,65 @@ export function AuthProvider({ children }) {
     if (status === 'loading') {
       setIsUserLoaded(false);
     } else if (status === 'authenticated') {
-      setUser(session.user); // Update user state with session data
+      setUser(session.user);
       setIsUserLoaded(true);
     } else {
-      setUser(null);
-      setIsUserLoaded(true);
+      // Check for email/password JWT in localStorage (non-Google login)
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setUser({
+            id: payload.userId,
+            name: payload.username,
+            email: payload.email,
+            publicKey: payload.publicKey,
+          });
+          setIsUserLoaded(true);
+        } catch {
+          setUser(null);
+          setIsUserLoaded(true);
+        }
+      } else {
+        setUser(null);
+        setIsUserLoaded(true);
+      }
     }
   }, [session, status]);
 
-  // Update login function to use NextAuth's signIn
   const login = async (username, password) => {
-    try {
-      const res = await signIn('credentials', {
-        redirect: false,
-        username,
-        password,
-      });
-      if (res.ok) {
-        router.push('/');
-      } else {
-        throw new Error('Login failed.');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Login failed');
     }
+
+    const data = await res.json();
+    localStorage.setItem('token', data.token);
+
+    // Set user from JWT payload
+    const payload = JSON.parse(atob(data.token.split('.')[1]));
+    setUser({
+      id: payload.userId,
+      name: payload.username,
+      email: payload.email,
+      publicKey: payload.publicKey,
+    });
+    setIsUserLoaded(true);
+
+    return data; // { token, encryptedPrivateKey }
   };
 
-  // Update logout function to use NextAuth's signOut
   const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('_pp');
+    sessionStorage.removeItem('_pp');
+    setUser(null);
     signOut({ callbackUrl: '/signup' });
   };
 

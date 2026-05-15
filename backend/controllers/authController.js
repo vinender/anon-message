@@ -2,12 +2,8 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
-const { OAuth2Client } = require('google-auth-library');
-const { decryptPrivateKey, encryptPrivateKey } = require('../utils/crypto');
 const { getSupabase } = require('../utils/dbConnect');
 const nodemailer = require('nodemailer');
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -20,9 +16,9 @@ const transporter = nodemailer.createTransport({
 
 // Traditional Signup
 exports.signup = async (req, res) => {
-  const { email, password, publicKey, privateKey } = req.body;
+  const { email, password, publicKey, encryptedPrivateKey } = req.body;
 
-  if (!email || !password || !publicKey || !privateKey) {
+  if (!email || !password || !publicKey || !encryptedPrivateKey) {
     return res.status(400).json({ message: 'All fields are required.' });
   }
 
@@ -46,9 +42,6 @@ exports.signup = async (req, res) => {
       .replace('-----END PUBLIC KEY-----', '')
       .replace(/\s/g, '');
 
-    // Encrypt the private key
-    const encryptedPrivateKey = encryptPrivateKey(privateKey);
-
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -56,7 +49,8 @@ exports.signup = async (req, res) => {
     // Generate username from email
     const username = email.split('@')[0] + '_' + crypto.randomBytes(3).toString('hex');
 
-    // Create new user
+    // encryptedPrivateKey is already encrypted client-side with user's passphrase.
+    // Server never sees the raw private key.
     const { data: user, error } = await supabase
       .from('users')
       .insert({
@@ -74,14 +68,12 @@ exports.signup = async (req, res) => {
       return res.status(500).json({ message: 'Error creating user.' });
     }
 
-    // Generate JWT and send it back
     const token = jwt.sign(
       {
         userId: user.id,
         username: user.username,
         email: user.email,
         publicKey: user.public_key,
-        privateKey: privateKey,
       },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
@@ -122,24 +114,24 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials.' });
     }
 
-    // Decrypt the private key
-    const encryptedPrivateKey = JSON.parse(user.encrypted_private_key);
-    const decryptedPrivateKey = decryptPrivateKey(encryptedPrivateKey);
-
-    // Generate JWT including the decrypted privateKey
+    // Generate JWT — server never decrypts the private key.
+    // The encrypted private key is returned so the client can decrypt it
+    // with the user's passphrase.
     const token = jwt.sign(
       {
         userId: user.id,
         username: user.username,
         email: user.email,
         publicKey: user.public_key,
-        privateKey: decryptedPrivateKey,
       },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    res.status(200).json({ token });
+    res.status(200).json({
+      token,
+      encryptedPrivateKey: user.encrypted_private_key,
+    });
   } catch (error) {
     console.error('Login Error:', error);
     res.status(500).json({ message: 'Server error during login.' });

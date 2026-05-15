@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Navbar from '../../components/navbar';
 import API_BASE_URL from '../../utils/config';
+import { hybridEncrypt } from '../../utils/crypto';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaLock,
@@ -18,50 +19,6 @@ import {
 } from 'react-icons/fa';
 
 const MAX_MESSAGE_LENGTH = 200;
-
-const base64ToArrayBuffer = (base64) => {
-  try {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-  } catch (error) {
-    console.error('Base64 to ArrayBuffer conversion failed:', error);
-    throw new Error('Invalid public key format.');
-  }
-};
-
-const encryptMessage = async (message, publicKey) => {
-  if (typeof window === 'undefined') return message;
-
-  try {
-    const encoder = new TextEncoder();
-    const messageBytes = encoder.encode(message);
-
-    const publicKeyBytes = base64ToArrayBuffer(publicKey);
-    const importedPublicKey = await window.crypto.subtle.importKey(
-      'spki',
-      publicKeyBytes,
-      { name: 'RSA-OAEP', hash: { name: 'SHA-256' } },
-      true,
-      ['encrypt']
-    );
-
-    const encryptedBytes = await window.crypto.subtle.encrypt(
-      { name: 'RSA-OAEP', hash: { name: 'SHA-256' } },
-      importedPublicKey,
-      messageBytes
-    );
-
-    return btoa(String.fromCharCode(...new Uint8Array(encryptedBytes)));
-  } catch (error) {
-    console.error('Encryption failed:', error);
-    throw new Error(`Encryption failed: ${error.message}`);
-  }
-};
 
 const CATEGORIES = [
   { key: 'Compliments', icon: FaHeart, accent: 'from-pink-500 to-rose-400' },
@@ -181,7 +138,6 @@ export default function SendMessage() {
           const data = await res.json();
           setPublicKey(data.publicKey);
         } catch (error) {
-          console.error('Error fetching public key:', error);
           setStatus('Error fetching public key');
         }
       }
@@ -196,21 +152,24 @@ export default function SendMessage() {
     }
 
     setIsLoading(true);
-    setStatus('Sending...');
+    setStatus('Encrypting...');
 
     try {
-      let encryptedMessage = message;
-      if (typeof window !== 'undefined') {
-        encryptedMessage = await encryptMessage(message, publicKey);
-      }
+      // Hybrid-encrypt locally — plaintext never leaves this browser
+      const encryptedMessage = await hybridEncrypt(message, publicKey);
+
+      setStatus('Sending...');
 
       const res = await fetch(`${API_BASE_URL}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ encryptedMessage, message, recipientUsername: username }),
+        body: JSON.stringify({ encryptedMessage, recipientUsername: username }),
       });
 
-      if (!res.ok) throw new Error('Failed to send message');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to send message');
+      }
 
       const data = await res.json();
       setStatus(data.status || 'Message sent successfully');
@@ -218,7 +177,6 @@ export default function SendMessage() {
       setSelectedMessage('');
     } catch (error) {
       setStatus('Error sending message: ' + error.message);
-      console.error('Send Message Error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -275,7 +233,7 @@ export default function SendMessage() {
                     className={`mb-6 p-4 rounded-xl text-sm font-medium border ${
                       status.toLowerCase().includes('error')
                         ? 'bg-red-500/10 border-red-500/20 text-red-200'
-                        : status === 'Sending...'
+                        : status === 'Encrypting...' || status === 'Sending...'
                         ? 'bg-zinc-500/10 border-zinc-500/20 text-zinc-200'
                         : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200'
                     }`}
@@ -424,7 +382,7 @@ export default function SendMessage() {
                 {/* Privacy note */}
                 <div className="flex items-center justify-center gap-2 text-xs text-zinc-500">
                   <FaLock className="text-[10px]" />
-                  End-to-end encrypted. The recipient is the only one who can read it.
+                  End-to-end encrypted. No one but the recipient can read this — not even us.
                 </div>
               </form>
             </div>

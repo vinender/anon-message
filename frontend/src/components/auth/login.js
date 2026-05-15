@@ -4,10 +4,10 @@ import { AuthContext } from '../context/AuthContext';
 import Navbar from '../navbar';
 import Link from 'next/link';
 import { decryptPrivateKey } from '@/utils/crypto';
-import { getPrivateKey } from '@/utils/storage';
+import { storePrivateKey } from '@/utils/storage';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import { FaLock, FaEyeSlash, FaEye } from 'react-icons/fa';
+import { FaLock, FaEyeSlash, FaEye, FaKey } from 'react-icons/fa';
 
 export default function Login() {
   const { login } = useContext(AuthContext);
@@ -18,191 +18,268 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  // Passphrase flow
+  const [step, setStep] = useState('credentials'); // credentials | passphrase
+  const [passphrase, setPassphrase] = useState('');
+  const [encryptedKey, setEncryptedKey] = useState(null);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     const validationErrors = {};
 
-    // Validate username
-    if (!username.trim()) {
-      validationErrors.username = 'Username is required.';
-    }
-
-    // Validate password
-    if (!password) {
-      validationErrors.password = 'Password is required.';
-    }
+    if (!username.trim()) validationErrors.username = 'Username is required.';
+    if (!password) validationErrors.password = 'Password is required.';
 
     setErrors(validationErrors);
 
-    if (Object.keys(validationErrors).length === 0) {
-      setIsLoading(true);
-      try {
-        await login(username, password);
+    if (Object.keys(validationErrors).length > 0) return;
 
-        // After successful login, prompt for passphrase to decrypt privateKey
-        const userPassphrase = prompt('Enter your passphrase to decrypt your private key:');
-        if (!userPassphrase) {
-          throw new Error('Passphrase is required to decrypt the private key.');
+    setIsLoading(true);
+    try {
+      // Authenticate — backend returns JWT + encryptedPrivateKey
+      const result = await login(username, password);
+
+      // Parse encrypted key from login result
+      if (result && result.encryptedPrivateKey) {
+        let parsedKey;
+        try {
+          parsedKey = typeof result.encryptedPrivateKey === 'string'
+            ? JSON.parse(result.encryptedPrivateKey)
+            : result.encryptedPrivateKey;
+        } catch {
+          parsedKey = result.encryptedPrivateKey;
         }
-
-        const encryptedData = await getPrivateKey();
-        if (!encryptedData) {
-          throw new Error('Private key not found. Please generate it during signup.');
-        }
-
-        const decryptedPrivateKey = await decryptPrivateKey(encryptedData, userPassphrase);
-
-        // For demonstration, we'll store it securely (not in localStorage in production)
-        localStorage.setItem('privateKey', decryptedPrivateKey);
-
-        // Redirect to dashboard
+        setEncryptedKey(parsedKey);
+        setStep('passphrase');
+        setErrors({});
+      } else {
+        // Legacy: no encrypted key returned (shouldn't happen after backend update)
         router.push('/');
-      } catch (err) {
-        setErrors({ apiError: err.message });
-        setIsLoading(false);
       }
+    } catch (err) {
+      setErrors({ apiError: err.message || 'Login failed. Check your credentials.' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const handlePassphraseSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!passphrase) {
+      setErrors({ passphraseError: 'Passphrase is required.' });
+      return;
+    }
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      // Decrypt private key with user-provided passphrase
+      const decryptedPrivateKey = await decryptPrivateKey(
+        encryptedKey.encryptedData || encryptedKey.encrypted_data,
+        encryptedKey.iv,
+        encryptedKey.salt,
+        passphrase
+      );
+
+      // Store encrypted key in IndexedDB (not localStorage — XSS risk)
+      await storePrivateKey(encryptedKey);
+
+      // Store passphrase for this session
+      sessionStorage.setItem('_pp', passphrase);
+      localStorage.setItem('_pp', passphrase);
+
+      router.push('/');
+    } catch (err) {
+      setErrors({ passphraseError: 'Incorrect passphrase. Please try again.' });
+      setIsLoading(false);
+    }
   };
+
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-gray-100 font-sans">
       <Navbar />
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="max-w-md w-full space-y-8"
         >
-          <div className="text-center">
-            <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-zinc-500 to-emerald-400 flex items-center justify-center mb-6">
-              <FaLock className="text-white text-xl" />
-            </div>
-            <h2 className="text-3xl font-bold text-white">
-              Welcome Back
-            </h2>
-            <p className="mt-3 text-zinc-400">
-              Log in to access your anonymous messages
-            </p>
-          </div>
+          {/* Step 1: Credentials */}
+          {step === 'credentials' && (
+            <>
+              <div className="text-center">
+                <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-zinc-500 to-emerald-400 flex items-center justify-center mb-6">
+                  <FaLock className="text-white text-xl" />
+                </div>
+                <h2 className="text-3xl font-bold text-white">Welcome Back</h2>
+                <p className="mt-3 text-zinc-400">Log in to access your anonymous messages</p>
+              </div>
 
-          <div className="mt-10">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/10 to-emerald-400/10 rounded-xl blur-xl"></div>
-              <div className="relative bg-zinc-900/80 backdrop-blur-sm p-8 rounded-xl border border-zinc-800">
-                {errors.apiError && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 bg-red-500/10 border border-red-500/20 text-red-200 p-4 rounded-lg"
-                  >
-                    <p className="text-sm font-medium">{errors.apiError}</p>
-                  </motion.div>
-                )}
-                
-                <form className="space-y-6" onSubmit={handleLogin}>
-                  <div>
-                    <label htmlFor="username" className="block text-sm font-medium text-zinc-300 mb-2">
-                      Username
-                    </label>
-                    <input
-                      id="username"
-                      name="username"
-                      type="text"
-                      autoComplete="username"
-                      required
-                      className={`appearance-none block w-full px-4 py-3 rounded-lg ${
-                        errors.username ? 'border-red-500 bg-red-500/5' : 'border-zinc-700 bg-zinc-800/50'
-                      } border placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition duration-200`}
-                      placeholder="Enter your username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                    />
-                    {errors.username && (
-                      <p className="text-red-400 text-xs mt-1">{errors.username}</p>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-2">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="password"
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        autoComplete="current-password"
-                        required
-                        className={`appearance-none block w-full px-4 py-3 rounded-lg ${
-                          errors.password ? 'border-red-500 bg-red-500/5' : 'border-zinc-700 bg-zinc-800/50'
-                        } border placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition duration-200`}
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                      <button 
-                        type="button" 
-                        onClick={togglePasswordVisibility}
-                        className="absolute inset-y-0 right-0 flex items-center px-3 text-zinc-400 hover:text-emerald-400 transition"
+              <div className="mt-10">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/10 to-emerald-400/10 rounded-xl blur-xl"></div>
+                  <div className="relative bg-zinc-900/80 backdrop-blur-sm p-8 rounded-xl border border-zinc-800">
+                    {errors.apiError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 bg-red-500/10 border border-red-500/20 text-red-200 p-4 rounded-lg"
                       >
-                        {showPassword ? <FaEyeSlash /> : <FaEye />}
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <p className="text-red-400 text-xs mt-1">{errors.password}</p>
+                        <p className="text-sm font-medium">{errors.apiError}</p>
+                      </motion.div>
                     )}
-                    
-                    <div className="flex justify-end mt-2">
-                      <Link href="/forgot-password" className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition">
-                        Forgot password?
-                      </Link>
+
+                    <form className="space-y-6" onSubmit={handleLogin}>
+                      <div>
+                        <label htmlFor="username" className="block text-sm font-medium text-zinc-300 mb-2">
+                          Username
+                        </label>
+                        <input
+                          id="username"
+                          name="username"
+                          type="text"
+                          autoComplete="username"
+                          required
+                          className={`appearance-none block w-full px-4 py-3 rounded-lg ${
+                            errors.username ? 'border-red-500 bg-red-500/5' : 'border-zinc-700 bg-zinc-800/50'
+                          } border placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition duration-200`}
+                          placeholder="Enter your username"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                        />
+                        {errors.username && <p className="text-red-400 text-xs mt-1">{errors.username}</p>}
+                      </div>
+
+                      <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-zinc-300 mb-2">
+                          Password
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="password"
+                            name="password"
+                            type={showPassword ? 'text' : 'password'}
+                            autoComplete="current-password"
+                            required
+                            className={`appearance-none block w-full px-4 py-3 rounded-lg ${
+                              errors.password ? 'border-red-500 bg-red-500/5' : 'border-zinc-700 bg-zinc-800/50'
+                            } border placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition duration-200`}
+                            placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            onClick={togglePasswordVisibility}
+                            className="absolute inset-y-0 right-0 flex items-center px-3 text-zinc-400 hover:text-emerald-400 transition"
+                          >
+                            {showPassword ? <FaEyeSlash /> : <FaEye />}
+                          </button>
+                        </div>
+                        {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
+
+                        <div className="flex justify-end mt-2">
+                          <Link href="/forgot-password" className="text-xs font-medium text-emerald-400 hover:text-emerald-300 transition">
+                            Forgot password?
+                          </Link>
+                        </div>
+                      </div>
+
+                      <div>
+                        <button
+                          type="submit"
+                          disabled={isLoading}
+                          className="group relative w-full flex justify-center py-3 px-4 bg-gradient-to-r from-zinc-500 to-emerald-400 text-sm font-medium rounded-lg text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-70"
+                        >
+                          {isLoading ? <span className="animate-pulse">Logging in...</span> : 'Sign in to your account'}
+                        </button>
+                      </div>
+                    </form>
+
+                    <div className="mt-6 text-center">
+                      <p className="text-sm text-zinc-400">
+                        Don&apos;t have an account?{' '}
+                        <Link href="/signup" className="font-medium text-emerald-400 hover:text-emerald-300 transition">
+                          Create an account
+                        </Link>
+                      </p>
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      className="group relative w-full flex justify-center py-3 px-4 bg-gradient-to-r from-zinc-500 to-emerald-400 text-sm font-medium rounded-lg text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-70"
-                    >
-                      {isLoading ? (
-                        <span className="animate-pulse">Logging in...</span>
-                      ) : (
-                        "Sign in to your account"
-                      )}
-                    </button>
-                  </div>
-                </form>
-                
-                <div className="mt-6 text-center">
-                  <p className="text-sm text-zinc-400">
-                    {`Don't have an account?`}{' '}
-                    <Link href="/signup" className="font-medium text-emerald-400 hover:text-emerald-300 transition">
-                      Create an account
-                    </Link>
+                <div className="mt-8 text-center">
+                  <p className="text-xs text-zinc-500">
+                    By logging in, you agree to our{' '}
+                    <Link href="/terms" className="text-emerald-400 hover:text-emerald-300">Terms of Service</Link>{' '}
+                    and{' '}
+                    <Link href="/privacy" className="text-emerald-400 hover:text-emerald-300">Privacy Policy</Link>
                   </p>
                 </div>
               </div>
-            </div>
-            
-            <div className="mt-8 text-center">
-              <p className="text-xs text-zinc-500">
-                By logging in, you agree to our{' '}
-                <Link href="/terms" className="text-emerald-400 hover:text-emerald-300">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy" className="text-emerald-400 hover:text-emerald-300">
-                  Privacy Policy
-                </Link>
-              </p>
-            </div>
-          </div>
+            </>
+          )}
+
+          {/* Step 2: Passphrase prompt */}
+          {step === 'passphrase' && (
+            <>
+              <div className="text-center">
+                <div className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-6">
+                  <FaKey className="text-white text-lg" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">Unlock Your Messages</h2>
+                <p className="mt-2 text-zinc-400 text-sm">
+                  Enter the encryption passphrase you saved when creating your account.
+                </p>
+              </div>
+
+              <div className="mt-8">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-zinc-500/10 to-emerald-400/10 rounded-xl blur-xl"></div>
+                  <div className="relative bg-zinc-900/80 backdrop-blur-sm p-6 rounded-xl border border-zinc-800">
+                    <form onSubmit={handlePassphraseSubmit} className="space-y-4">
+                      {errors.passphraseError && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-red-500/10 border border-red-500/20 text-red-200 p-3 rounded-lg"
+                        >
+                          <p className="text-sm font-medium">{errors.passphraseError}</p>
+                        </motion.div>
+                      )}
+
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">
+                          Encryption Passphrase
+                        </label>
+                        <input
+                          type="password"
+                          value={passphrase}
+                          onChange={(e) => setPassphrase(e.target.value)}
+                          className="block w-full px-4 py-3 rounded-lg border-zinc-700 bg-zinc-800/50 border placeholder-zinc-500 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-transparent transition font-mono text-sm"
+                          placeholder="Paste your encryption passphrase..."
+                          required
+                          autoFocus
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full flex justify-center py-3 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isLoading ? 'Decrypting...' : 'Unlock Messages'}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </motion.div>
       </div>
     </div>

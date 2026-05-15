@@ -1,52 +1,75 @@
 // components/Messages.js
 import { useState, useEffect } from 'react';
 import API_BASE_URL from '../utils/config';
-import { decryptMessage } from '@/utils/crypto';
-
+import { decryptMessage, decryptPrivateKey } from '@/utils/crypto';
+import { getPrivateKey } from '@/utils/storage';
 
 export default function Messages({ user }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [privateKey, setPrivateKey] = useState(null);
+
+  // Decrypt private key on mount
+  useEffect(() => {
+    const loadPrivateKey = async () => {
+      try {
+        const encryptedKeyData = await getPrivateKey();
+        if (!encryptedKeyData) {
+          throw new Error('Private key not found. Please log in again.');
+        }
+
+        const passphrase = sessionStorage.getItem('_pp') || localStorage.getItem('_pp');
+        if (!passphrase) {
+          throw new Error('Encryption passphrase not found. Please log in again.');
+        }
+
+        const decrypted = await decryptPrivateKey(
+          encryptedKeyData.encryptedData,
+          encryptedKeyData.iv,
+          encryptedKeyData.salt,
+          passphrase
+        );
+
+        setPrivateKey(decrypted);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+    loadPrivateKey();
+  }, []);
 
   useEffect(() => {
     const fetchAndDecryptMessages = async () => {
+      if (!privateKey) return;
       try {
         const token = localStorage.getItem('token');
         const res = await fetch(`${API_BASE_URL}/messages`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) {
-          throw new Error('Failed to fetch messages');
-        }
+        if (!res.ok) throw new Error('Failed to fetch messages');
         const data = await res.json();
-        
-        // Decrypt messages
+
         const decryptedMessages = await Promise.all(
           data.messages.map(async (msg) => ({
             ...msg,
-            content: await decryptMessage(msg.content, user.privateKey)
+            content: await decryptMessage(msg.content, privateKey),
           }))
         );
 
-        console.log('decrypted message',decryptedMessages)
-        
         setMessages(decryptedMessages);
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching or decrypting messages:', err);
         setError(err.message);
         setLoading(false);
       }
     };
 
-    if (user && user.privateKey) {
+    if (privateKey) {
       fetchAndDecryptMessages();
     }
-  }, [user]);
+  }, [privateKey]);
 
   if (loading) {
     return (
