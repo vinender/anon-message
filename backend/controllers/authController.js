@@ -186,71 +186,77 @@ exports.googleAuth = async (req, res) => {
       .from('users')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
-    let user = existingUser;
-
-    if (!user) {
-      // Generate a unique username
-      let baseUsername = name;
-      let username = baseUsername;
-      let counter = 1;
-
-      // Keep checking until we find a unique username
-      let { data: usernameCheck } = await supabase
-        .from('users')
-        .select('id')
-        .eq('username', username)
-        .single();
-
-      while (usernameCheck) {
-        username = `${baseUsername}${counter}`;
-        counter++;
-        const result = await supabase
-          .from('users')
-          .select('id')
-          .eq('username', username)
-          .single();
-        usernameCheck = result.data;
-      }
-
-      // Create new user
-      const { data: newUser, error } = await supabase
-        .from('users')
-        .insert({
-          username,
-          email,
-          google_id: credential,
-          public_key: publicKey,
-          encrypted_private_key: JSON.stringify(encryptedPrivateKey),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Supabase insert error:', error);
-        if (error.code === '23505') {
-          return res.status(400).json({ message: 'Username or email already exists.' });
-        }
-        return res.status(500).json({ message: 'Error creating user.', error: error });
-      }
-
-      user = newUser;
+    if (existingUser) {
+      const token = jwt.sign(
+        {
+          userId: existingUser.id,
+          username: existingUser.username,
+          email: existingUser.email,
+          publicKey: existingUser.public_key,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '1d' }
+      );
+      return res.status(200).json({ token });
     }
 
-    // Generate JWT token
+    // New user — derive base username from name, append short random suffix
+    // so we don't need a loop (each Supabase query takes ~8s on free tier).
+    const base = name.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20) || 'user';
+    const username = `${base}_${crypto.randomBytes(4).toString('hex')}`;
+
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .insert({
+        username,
+        email,
+        google_id: credential,
+        public_key: publicKey,
+        encrypted_private_key: JSON.stringify(encryptedPrivateKey),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase insert error:', error);
+      if (error.code === '23505') {
+        // Collision on username or email — retry once with different suffix
+        const retryUsername = `${base}_${crypto.randomBytes(6).toString('hex')}`;
+        const { data: retryUser, error: retryError } = await supabase
+          .from('users')
+          .insert({
+            username: retryUsername,
+            email,
+            google_id: credential,
+            public_key: publicKey,
+            encrypted_private_key: JSON.stringify(encryptedPrivateKey),
+          })
+          .select()
+          .single();
+
+        if (retryError) {
+          return res.status(500).json({ message: 'Error creating user.', error: retryError });
+        }
+        newUser = retryUser;
+      } else {
+        return res.status(500).json({ message: 'Error creating user.', error: error });
+      }
+    }
+
     const token = jwt.sign(
       {
-        userId: user.id,
-        username: user.username,
-        email: user.email,
-        publicKey: user.public_key,
+        userId: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        publicKey: newUser.public_key,
       },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    res.status(200).json({ token });
+    res.status(201).json({ token });
   } catch (error) {
     console.error('Google Auth Error:', error);
     res.status(500).json({
