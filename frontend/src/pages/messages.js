@@ -1,7 +1,7 @@
 // components/Messages.js
 import { useState, useEffect } from 'react';
 import API_BASE_URL from '../utils/config';
-import { decryptMessage, decryptPrivateKey } from '@/utils/crypto';
+import { decryptMessage } from '@/utils/crypto';
 import { getPrivateKey } from '@/utils/storage';
 
 export default function Messages({ user }) {
@@ -10,28 +10,12 @@ export default function Messages({ user }) {
   const [error, setError] = useState(null);
   const [privateKey, setPrivateKey] = useState(null);
 
-  // Decrypt private key on mount
   useEffect(() => {
     const loadPrivateKey = async () => {
       try {
-        const encryptedKeyData = await getPrivateKey();
-        if (!encryptedKeyData) {
-          throw new Error('Private key not found. Please log in again.');
-        }
-
-        const passphrase = sessionStorage.getItem('_pp') || localStorage.getItem('_pp');
-        if (!passphrase) {
-          throw new Error('Encryption passphrase not found. Please log in again.');
-        }
-
-        const decrypted = await decryptPrivateKey(
-          encryptedKeyData.encryptedData,
-          encryptedKeyData.iv,
-          encryptedKeyData.salt,
-          passphrase
-        );
-
-        setPrivateKey(decrypted);
+        const key = await getPrivateKey();
+        if (!key) throw new Error('Encryption key not found. Sign up again on this device.');
+        setPrivateKey(key);
       } catch (err) {
         setError(err.message);
         setLoading(false);
@@ -66,9 +50,7 @@ export default function Messages({ user }) {
       }
     };
 
-    if (privateKey) {
-      fetchAndDecryptMessages();
-    }
+    if (privateKey) fetchAndDecryptMessages();
   }, [privateKey]);
 
   if (loading) {
@@ -79,13 +61,8 @@ export default function Messages({ user }) {
     );
   }
 
-  if (error) {
-    return <p className="text-red-500">Error: {error}</p>;
-  }
-
-  if (messages.length === 0) {
-    return <p>No messages received yet.</p>;
-  }
+  if (error) return <p className="text-red-500">Error: {error}</p>;
+  if (messages.length === 0) return <p>No messages received yet.</p>;
 
   return (
     <div className="bg-white p-6 rounded shadow-md">
@@ -93,9 +70,7 @@ export default function Messages({ user }) {
       {messages?.map((msg) => (
         <div key={msg._id} className="border-b py-4">
           <p>{msg.content}</p>
-          <p className="text-gray-500 text-sm">
-            {new Date(msg.createdAt).toLocaleString()}
-          </p>
+          <p className="text-gray-500 text-sm">{new Date(msg.createdAt).toLocaleString()}</p>
         </div>
       ))}
     </div>

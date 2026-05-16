@@ -60,6 +60,9 @@ CREATE TRIGGER update_users_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Allow encrypted_private_key to be NULL (private key stays client-side only)
+ALTER TABLE users ALTER COLUMN encrypted_private_key DROP NOT NULL;
+
 -- ========================
 -- RPC: upsert user by email (single query — avoids free-tier cold-start timeout)
 -- ========================

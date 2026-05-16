@@ -58,7 +58,7 @@ exports.signup = async (req, res) => {
         email,
         password: hashedPassword,
         public_key: strippedPublicKey,
-        encrypted_private_key: JSON.stringify(encryptedPrivateKey),
+        encrypted_private_key: JSON.stringify(encryptedPrivateKey || {}),
       })
       .select()
       .single();
@@ -208,7 +208,7 @@ exports.googleAuth = async (req, res) => {
         email,
         google_id: credential,
         public_key: publicKey,
-        encrypted_private_key: JSON.stringify(encryptedPrivateKey),
+        encrypted_private_key: JSON.stringify(encryptedPrivateKey || {}),
       })
       .select('id, username, email, public_key')
       .single();
@@ -224,7 +224,7 @@ exports.googleAuth = async (req, res) => {
             email,
             google_id: credential,
             public_key: publicKey,
-            encrypted_private_key: JSON.stringify(encryptedPrivateKey),
+            encrypted_private_key: JSON.stringify(encryptedPrivateKey || {}),
           })
           .select('id, username, email, public_key')
           .single();

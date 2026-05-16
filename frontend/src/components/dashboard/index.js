@@ -2,7 +2,7 @@ import { useCallback, useContext, useEffect, useState } from 'react';
 import Navbar from '../navbar';
 import { AuthContext } from '../context/AuthContext';
 import API_BASE_URL from '../../utils/config';
-import { decryptMessage, decryptPrivateKey } from '@/utils/crypto';
+import { decryptMessage } from '@/utils/crypto';
 import { getPrivateKey } from '@/utils/storage';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
@@ -43,35 +43,17 @@ export default function Dashboard() {
   
       const { messages } = await response.json();
       
-      // Get encrypted private key data
-      const encryptedKeyData = await getPrivateKey();
-      
-      if (!encryptedKeyData) {
-        throw new Error('Private key not found');
-      }
-  
-      // Decrypt private key with user's passphrase
-      const passphrase = sessionStorage.getItem('_pp') || localStorage.getItem('_pp');
-      if (!passphrase) {
-        throw new Error('Encryption passphrase not found. Please log in again.');
+      // Get private key from IndexedDB (stored during signup, never leaves browser)
+      const privateKey = await getPrivateKey();
+      if (!privateKey) {
+        throw new Error('Encryption key not found. Sign up again on this device.');
       }
 
-      const decryptedPrivateKey = await decryptPrivateKey(
-        encryptedKeyData.encryptedData,
-        encryptedKeyData.iv,
-        encryptedKeyData.salt,
-        passphrase
-      );
-
-      if (!decryptedPrivateKey) {
-        throw new Error('Failed to decrypt private key');
-      }
-      
       // Decrypt messages
       const decryptedMessages = await Promise.all(
         messages.map(async (msg) => {
           try {
-            const decryptedContent = await decryptMessage(msg.content, decryptedPrivateKey);
+            const decryptedContent = await decryptMessage(msg.content, privateKey);
             return { ...msg, content: decryptedContent };
           } catch (error) {
             console.error('Message decryption failed:', {

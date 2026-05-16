@@ -74,8 +74,6 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('_pp');
-    sessionStorage.removeItem('_pp');
     setUser(null);
     signOut({ callbackUrl: '/signup' });
   };
