@@ -100,14 +100,24 @@ export default function Dashboard() {
     }
   }, [isUserLoaded, user, fetchAndDecryptMessages]);
 
+  // Resolve DB username (JWT has it; Google session.user.name is display name with spaces)
+  const username = (() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      const token = localStorage.getItem('token');
+      if (token) return JSON.parse(atob(token.split('.')[1])).username;
+    } catch {}
+    return user?.name || '';
+  })();
+
   // Generate shareable link
   useEffect(() => {
-    if (typeof window !== 'undefined' && user) {
+    if (typeof window !== 'undefined' && username) {
       const origin = window.location.origin;
-      const link = `${origin}/send-message/${user.name}`;
+      const link = `${origin}/send-message/${username}`;
       setShareLink(link);
     }
-  }, [user]);
+  }, [username]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -146,7 +156,7 @@ export default function Dashboard() {
         >
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-white mb-2">
-              Welcome, <span className="bg-gradient-to-r from-zinc-500 to-emerald-400 bg-clip-text text-transparent">{user.name}</span>
+              Welcome, <span className="bg-gradient-to-r from-zinc-500 to-emerald-400 bg-clip-text text-transparent">{username}</span>
             </h1>
             <p className="text-zinc-400 max-w-2xl mx-auto">
               Share your unique link and start receiving anonymous messages from anyone. All messages are end-to-end encrypted.
@@ -195,7 +205,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* --- USE THE ShareButtons COMPONENT --- */}
-                    <ShareButtons shareUrl={shareLink} userName={user?.name} />
+                    <ShareButtons shareUrl={shareLink} userName={username} />
 
                   </div>
                   {/* Removed the old footer with SVG icons */}
